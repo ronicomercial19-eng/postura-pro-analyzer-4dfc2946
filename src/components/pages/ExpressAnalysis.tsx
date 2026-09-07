@@ -65,17 +65,22 @@ const ExpressAnalysis = ({ onNavigate }: Props) => {
         const path = `${assessmentId}/${v.key}.${ext}`;
         const { error: upErr } = await supabase.storage.from('photos').upload(path, file, { upsert: true, contentType: file.type });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path);
+        // Bucket "photos" é privado: gera signed URL (7 dias) em vez de URL pública
+        const { data: signedData, error: signedErr } = await supabase.storage
+          .from('photos')
+          .createSignedUrl(path, 60 * 60 * 24 * 7);
+        if (signedErr) throw signedErr;
+        const imageUrl = signedData.signedUrl;
         await supabase.from('ppa_media_assets' as any).insert({
           assessment_id: assessmentId,
-          image_url: urlData.publicUrl,
+          image_url: imageUrl,
           view: v.view,
           side: v.side,
           type: 'foto',
           qa_status: 'pass',
           capture_confidence: 0.9,
         });
-        uploadedPhotos.push({ imageUrl: urlData.publicUrl, view: v.view });
+        uploadedPhotos.push({ imageUrl, view: v.view });
       }
 
       // 3. PONTE CENTRAL: roda MediaPipe real nas 4 fotos (mesmo motor do fluxo normal)
@@ -111,7 +116,7 @@ const ExpressAnalysis = ({ onNavigate }: Props) => {
 
       // 5. Dispara análise IA com o payload CORRETO (findings/metrics/clientData/context/pain)
       setProgress('Gerando relatório com IA...');
-      const { data: report, error: fnErr } = await supabase.functions.invoke('analyze-report', {
+      const { data: reportData, error: fnErr } = await supabase.functions.invoke('analyze-report', {
         body: {
           findings: poseResult.findings,
           metrics: poseResult.metrics,
@@ -121,7 +126,44 @@ const ExpressAnalysis = ({ onNavigate }: Props) => {
           pain: { region: 'não_informada', intensity: 0, triggers: 'nenhum' },
         },
       });
-      if (fnErr) console.warn('analyze-report error:', fnErr);
+
+      // 6. Salva de fato o relatório da IA (antes ele era descartado — nunca ficava
+      // visível no ResultsHUD, que teria que rodar tudo de novo com um segundo clique).
+      // Aqui já gravamos analysis_run como "concluido" + ppa_engine_decisions com o
+      // relatório completo, igual ao fluxo normal (ResultsHUD.handleSaveReport).
+      if (fnErr) {
+        console.warn('analyze-report error:', fnErr);
+        toast.warning('Achados salvos, mas o relatório de IA falhou. Você pode gerar de novo em Resultados.');
+      } else if (reportData?.status === 'error') {
+        console.warn('analyze-report returned error:', reportData.error);
+        toast.warning('Achados salvos, mas o relatório de IA falhou: ' + reportData.error);
+      } else if (reportData?.report) {
+        const report = reportData.report;
+        await supabase.from('ppa_analysis_runs' as any).update({
+          status: 'concluido',
+          confidence_final: report.confidence_score,
+          dominant_vector: { archetype: report.postural_archetype, mode: report.operational_mode },
+        }).eq('id', runId);
+
+        await supabase.from('ppa_engine_decisions' as any).insert({
+          analysis_run_id: runId,
+          macro_state: report.operational_mode,
+          risk_level: report.risk_assessment.overall_score > 70 ? 'alto' : report.risk_assessment.overall_score > 40 ? 'moderado' : 'baixo',
+          decided_by: 'gemini-auto-express',
+          micro_states: report.guardrails.filter((g: any) => g.triggered).map((g: any) => g.code),
+          final_decision: {
+            mode: report.operational_mode,
+            justification: report.operational_justification,
+            protocol: report.recovery_protocol,
+            diagnosis: report.macro_diagnosis,
+            archetype: report.postural_archetype,
+            clinical_summary: report.clinical_summary,
+            biomech_gps: report.biomech_gps || {},
+          },
+        });
+
+        await supabase.from('ppa_assessments' as any).update({ status: 'pronto' }).eq('id', assessmentId);
+      }
 
       setAssessment(assessmentId, user.id, user.email || 'Eu');
       setAnalysisRunId(runId);
