@@ -30,7 +30,7 @@ interface ResultsHUDProps {
 interface StudentOption { student_id: string; full_name: string | null; email: string | null; }
 interface AssessmentOption { id: string; created_at: string; status: string; }
 
-type ResultStatus = 'idle' | 'processando' | 'pronto' | 'baixa_confianca' | 'conflitante' | 'precisa_midia';
+type ResultStatus = 'idle' | 'processando' | 'analisado' | 'pronto' | 'baixa_confianca' | 'conflitante' | 'precisa_midia';
 
 interface AIReport {
   macro_diagnosis: string;
@@ -165,10 +165,15 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
 
   const loadAssessmentData = async () => {
     try {
+      // Busca TODAS as fotos da avaliacao (nao so a primeira) e prioriza a vista anterior para o canvas
       const { data: photos } = await supabase
         .from('ppa_media_assets' as any).select('image_url, view')
-        .eq('assessment_id', active.assessmentId).limit(1);
-      if (photos && (photos as any[]).length > 0) setPhotoUrl((photos as any[])[0].image_url);
+        .eq('assessment_id', active.assessmentId);
+      if (photos && (photos as any[]).length > 0) {
+        const list = photos as any[];
+        const anterior = list.find(p => p.view === 'anterior');
+        setPhotoUrl((anterior || list[0]).image_url);
+      }
 
       if (active.analysisRunId) {
         const [findingsRes, metricsRes, clustersRes] = await Promise.all([
@@ -340,8 +345,11 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
         setAiReport(data.report);
         runLocalDiagnostics(data.report.findings_analysis);
         buildGPSMapping(data.report);
-        setStatus(data.report.confidence_score < 0.6 ? 'baixa_confianca' : 'pronto');
-        toast.success(data.report.confidence_score < 0.6 ? 'Confiança baixa. Revise manualmente.' : 'Análise concluída!');
+        // Nao marca "pronto" ainda: "pronto" (que libera Publicar para o Aluno)
+        // so acontece depois que o relatorio for de fato salvo em handleSaveReport,
+        // para o Publicar nunca referenciar uma analysis_run que nao tem o registro completo salvo.
+        setStatus(data.report.confidence_score < 0.6 ? 'baixa_confianca' : 'analisado');
+        toast.success(data.report.confidence_score < 0.6 ? 'Confiança baixa. Revise manualmente.' : 'Análise concluída! Clique em "Salvar Relatório" para poder publicar para o aluno.');
       }
     } catch (err: any) {
       toast.error('Erro inesperado na análise.');
@@ -401,7 +409,10 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
 
       await supabase.from('ppa_assessments' as any).update({ status: 'pronto' }).eq('id', active.assessmentId);
       setFlowStatus('pronto');
-      toast.success('Relatório salvo!');
+      // So agora libera o botao "Publicar para o Aluno": o analysisRunId ja aponta
+      // para a run com engine_decisions/findings/metrics completos e salvos.
+      setStatus('pronto');
+      toast.success('Relatório salvo! Agora você já pode publicar para o aluno.');
     } catch (err: any) { toast.error('Erro ao salvar: ' + err.message); }
     finally { setIsSaving(false); }
   };
@@ -812,7 +823,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
           {isAnalyzing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Brain className="h-4 w-4 mr-2" />}
           {isAnalyzing ? 'Analisando...' : aiReport ? 'Reanalisar' : 'Analisar com Gemini'}
         </Button>
-        {aiReport && (
+        {aiReport && status !== 'pronto' && (
           <Button variant="outline" onClick={handleSaveReport} disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             {isSaving ? 'Salvando...' : 'Salvar Relatório'}
