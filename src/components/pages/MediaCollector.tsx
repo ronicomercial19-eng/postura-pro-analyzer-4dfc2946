@@ -95,8 +95,12 @@ const MediaCollector = ({ onNavigate }: MediaCollectorProps) => {
     });
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path);
-    const imageUrl = urlData.publicUrl;
+    // Bucket "photos" é privado: gera signed URL (7 dias) em vez de URL pública
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('photos')
+      .createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (signedError) throw signedError;
+    const imageUrl = signedData.signedUrl;
 
     // Insert media asset record
     const { error: insertError } = await supabase.from('ppa_media_assets' as any).insert({
