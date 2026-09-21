@@ -1,7 +1,22 @@
 project_id = "rdyfekpeoeyymuqzujrr"
 
 [functions.analyze-posture]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-report]
+verify_jwt = true
+
+[functions.analyze-complaint]
+verify_jwt = true
+
+[functions.analyze-body-composition]
+verify_jwt = true
+
+[functions.analyze-history]
+verify_jwt = true
+
+[functions.analyze-movement]
+verify_jwt = true
+
+[functions.fitpro-api]
 verify_jwt = false
