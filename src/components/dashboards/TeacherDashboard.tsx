@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Activity, Zap, ArrowRight, Plus, BarChart3, BookOpen, TrendingUp, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveAssessment } from '@/contexts/ActiveAssessmentContext';
-import PublishToStudent from '@/components/teacher/PublishToStudent';
 
 interface Props { onNavigate: (view: string) => void; }
 
@@ -131,7 +130,9 @@ const TeacherDashboard = ({ onNavigate }: Props) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <PublishToStudent studentId={a.student_id} />
+                    {/* O publicar-para-aluno de verdade fica em Resultados, onde o aiReport
+                        completo (relatorio, plano, fail-safes) esta disponivel. Aqui so
+                        navegamos para o lugar certo, em vez de abrir um modal em branco. */}
                     <Button variant="ghost" size="sm" onClick={() => {
                       setAssessment(a.id, a.student_id, a.student_name || '');
                       onNavigate(a.status === 'em_coleta' ? 'media-collector' : 'results-hud');
