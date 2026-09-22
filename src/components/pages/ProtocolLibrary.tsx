@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, Search, Plus, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { BookOpen, Search, Plus, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ProtocolStep {
   sequence: number;
@@ -24,6 +26,8 @@ interface Protocol {
   contraindications: string[];
   version: number;
 }
+
+interface StudentOption { student_id: string; full_name: string | null; email: string | null; }
 
 const CATEGORY_LABELS: Record<string, string> = {
   decompression: 'Descompressão',
@@ -46,8 +50,16 @@ const ProtocolLibrary = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Aplicar protocolo a um aluno como plano ativo
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignProtocol, setAssignProtocol] = useState<Protocol | null>(null);
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
   useEffect(() => {
     loadProtocols();
+    loadStudents();
   }, []);
 
   const loadProtocols = async () => {
@@ -60,6 +72,68 @@ const ProtocolLibrary = () => {
       setProtocols([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStudents = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase.rpc('get_teacher_students', { teacher_id: user.id });
+      if (error) throw error;
+      setStudents((data as any[]) || []);
+    } catch (e) {
+      console.error('Falha ao carregar alunos:', e);
+    }
+  };
+
+  const openAssign = (p: Protocol) => {
+    setAssignProtocol(p);
+    setSelectedStudentId('');
+    setAssignOpen(true);
+  };
+
+  const applyProtocolToStudent = async () => {
+    if (!assignProtocol || !selectedStudentId) {
+      toast.error('Selecione um aluno');
+      return;
+    }
+    setAssigning(true);
+    try {
+      const stepsHtml = (assignProtocol.steps || [])
+        .map(s => `<li><strong>${s.name}</strong> — ${s.sets}x${s.reps} (${s.tempo}). ${s.cue}</li>`)
+        .join('');
+      const reportHtml = `<h2>Protocolo: ${assignProtocol.protocol_key.replace(/_/g, ' ')}</h2>` +
+        `<p>Categoria: ${CATEGORY_LABELS[assignProtocol.category] || assignProtocol.category}</p>` +
+        `<ul>${stepsHtml}</ul>`;
+      const stretchingPlan = (assignProtocol.steps || []).map((s, i) => ({
+        order: i + 1,
+        name: s.name,
+        sets: s.sets,
+        reps_or_time: String(s.reps),
+        cue: s.cue,
+      }));
+
+      // Desativa publicações antigas do aluno e cria esta como o plano ativo
+      await supabase.from('ppa_plan_links' as any).update({ active: false }).eq('student_id', selectedStudentId).eq('active', true);
+      const { error } = await supabase.from('ppa_plan_links' as any).insert({
+        student_id: selectedStudentId,
+        active: true,
+        published_at: new Date().toISOString(),
+        report_html: reportHtml,
+        recommendations: assignProtocol.contraindications?.length
+          ? assignProtocol.contraindications.map(c => ({ category: 'contraindicacao', text: c, is_alert: true }))
+          : [],
+        stretching_plan: stretchingPlan,
+      });
+      if (error) throw error;
+
+      toast.success('Protocolo aplicado como plano ativo do aluno');
+      setAssignOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Falha ao aplicar protocolo');
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -121,7 +195,7 @@ const ProtocolLibrary = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">v{p.version}</Badge>
-                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); }}>
+                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openAssign(p); }}>
                       <Plus className="h-3 w-3 mr-1" /> Plano
                     </Button>
                   </div>
@@ -163,6 +237,39 @@ const ProtocolLibrary = () => {
           ))}
         </div>
       )}
+
+      {/* Modal: aplicar protocolo a um aluno como plano ativo */}
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aplicar protocolo como plano do aluno</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Protocolo: <strong>{assignProtocol?.protocol_key.replace(/_/g, ' ')}</strong>
+            </p>
+            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+              <SelectTrigger><SelectValue placeholder="Selecione o aluno" /></SelectTrigger>
+              <SelectContent>
+                {students.length === 0 && <SelectItem value="__empty__" disabled>Nenhum aluno vinculado</SelectItem>}
+                {students.map(s => (
+                  <SelectItem key={s.student_id} value={s.student_id}>{s.full_name || s.email}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Isso substitui o plano ativo atual do aluno por este protocolo (mesma lógica de "Publicar para o Aluno" em Resultados).
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancelar</Button>
+            <Button onClick={applyProtocolToStudent} disabled={assigning || !selectedStudentId}>
+              {assigning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+              Aplicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
