@@ -22,9 +22,13 @@ import StudentStretchingPlan from '@/components/student/StudentStretchingPlan';
 import FitProApiSettings from '@/components/pages/FitProApiSettings';
 import HighPerformanceEngine from '@/components/pages/HighPerformanceEngine';
 import { useAuth } from '@/hooks/useAuth';
+import { useActiveAssessment } from '@/contexts/ActiveAssessmentContext';
 
 const Index = () => {
-  const { userRole, user } = useAuth();
+  const { userRole } = useAuth();
+  const { active } = useActiveAssessment();
+  const activeStudentId = active.studentId || undefined;
+  const activeAssessmentId = active.assessmentId || undefined;
   const isTeacher = userRole === 'teacher' || userRole === 'admin';
   const [currentView, setCurrentView] = useState('dashboard');
 
@@ -41,11 +45,11 @@ const Index = () => {
       case 'assessment-wizard':
         return <AssessmentWizard onNavigate={setCurrentView} />;
       case 'movement-analyser':
-        return <MovementAnalyser studentId={user?.id} />;
+        return <MovementAnalyser studentId={activeStudentId} assessmentId={activeAssessmentId} />;
       case 'complaint-analyser':
-        return <ComplaintAnalyser studentId={user?.id} />;
+        return <ComplaintAnalyser studentId={activeStudentId} assessmentId={activeAssessmentId} />;
       case 'body-composition':
-        return <BodyCompositionEstimator studentId={user?.id} />;
+        return <BodyCompositionEstimator studentId={activeStudentId} />;
       case 'high-performance':
         return <HighPerformanceEngine onNavigate={setCurrentView} />;
       case 'media-collector':

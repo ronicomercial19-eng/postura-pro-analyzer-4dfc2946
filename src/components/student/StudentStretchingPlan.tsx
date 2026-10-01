@@ -9,6 +9,8 @@ import type { StretchingPlanItem } from '@/utils/studentReportGenerator';
 
 const CATEGORY_LABEL: Record<string, { label: string; color: string }> = {
   liberacao: { label: 'Liberação', color: 'bg-orange-100 text-orange-700 border-orange-300' },
+  alongamento: { label: 'Alongamento', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+  fortalecimento: { label: 'Fortalecimento', color: 'bg-purple-100 text-purple-700 border-purple-300' },
   ativacao: { label: 'Ativação', color: 'bg-blue-100 text-blue-700 border-blue-300' },
   integracao: { label: 'Integração', color: 'bg-green-100 text-green-700 border-green-300' },
 };
