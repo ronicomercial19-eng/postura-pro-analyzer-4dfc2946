@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,9 @@ import { getPrescriptionMatrixForFlags, PrescriptionMatrixRow } from '@/data/pre
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User } from 'lucide-react';
 import PublishToStudent from '@/components/teacher/PublishToStudent';
+import PrescriptionPanel from '@/components/dashboard/PrescriptionPanel';
+import { flagsFromFindings, buildPrescription, buildLocalReport, sideText, DetectedFlag } from '@/services/prescriptionService';
+import { MUSCLE_MAP } from '@/data/muscleMap';
 
 interface ResultsHUDProps {
   onNavigate?: (view: string) => void;
@@ -54,6 +57,18 @@ interface SupabaseFindings { finding_key: string; direction: string | null; seve
 interface SupabaseMetric { key: string; value: number; unit: string | null; severity: number; }
 interface SupabaseCluster { cluster_types: any; score: number; }
 
+// URLs assinadas gravadas no banco expiram (7 dias). Renova a partir do caminho do arquivo.
+async function refreshSignedUrl(url: string): Promise<string> {
+  const m = url?.match(/\/object\/sign\/photos\/([^?]+)/);
+  if (!m) return url;
+  try {
+    const { data } = await supabase.storage.from('photos').createSignedUrl(decodeURIComponent(m[1]), 3600);
+    return data?.signedUrl || url;
+  } catch { return url; }
+}
+
+const FLAG_CODE_RE = /^[A-Z]{3}\d{2}$/;
+
 const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
   const { active, setAssessment, setAnalysisRunId, setStatus: setFlowStatus } = useActiveAssessment();
   const { user, userRole } = useAuth();
@@ -66,12 +81,12 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
   const [realFindings, setRealFindings] = useState<SupabaseFindings[]>([]);
   const [realMetrics, setRealMetrics] = useState<SupabaseMetric[]>([]);
   const [realClusters, setRealClusters] = useState<SupabaseCluster[]>([]);
-  const [localDiagnostics, setLocalDiagnostics] = useState<any>(null);
   const [gpsMapping, setGpsMapping] = useState<Record<string, any> | null>(null);
-  const [failSafes, setFailSafes] = useState<FailSafeResult | null>(null);
-  const [nmAlerts, setNmAlerts] = useState<NeuroMetabolicAlert[]>([]);
   const [traumaContext, setTraumaContext] = useState<TraumaContextResult | null>(null);
-  const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionMatrixRow[]>([]);
+  const [photoView, setPhotoView] = useState<string>('anterior');
+  const [manualFlags, setManualFlags] = useState<string[]>([]);
+  const [aiFlagCodes, setAiFlagCodes] = useState<string[]>([]);
+  const [aiSource, setAiSource] = useState<'gemini' | 'local'>('gemini');
 
   // Student/assessment selectors
   const [students, setStudents] = useState<StudentOption[]>([]);
@@ -172,7 +187,9 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
       if (photos && (photos as any[]).length > 0) {
         const list = photos as any[];
         const anterior = list.find(p => p.view === 'anterior');
-        setPhotoUrl((anterior || list[0]).image_url);
+        const chosen = anterior || list[0];
+        setPhotoView(chosen.view || 'anterior');
+        setPhotoUrl(await refreshSignedUrl(chosen.image_url));
       }
 
       if (active.analysisRunId) {
@@ -188,6 +205,8 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
     } catch (err) { console.error('Error loading assessment data:', err); }
   };
 
+  // Extrai flags das chaves devolvidas pela IA (texto aproximado ou codigo exato).
+  // As flags medidas na foto NAO passam por aqui: vem direto de realFindings (com lado).
   const runLocalDiagnostics = (findings: AIReport['findings_analysis']) => {
     const flagMap: Record<string, string> = {
       'anteriorização_cervical': 'PEP14', 'anteriorização cabeça': 'PEP14', 'cabeça protusa': 'PEP14',
@@ -214,6 +233,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
 
     const flags: string[] = [];
     findings.forEach(f => {
+      if (FLAG_CODE_RE.test(f.key) && !flags.includes(f.key)) { flags.push(f.key); return; }
       const key = f.key.toLowerCase().replace(/_/g, ' ');
       for (const [pattern, flag] of Object.entries(flagMap)) {
         if (key.includes(pattern.replace(/_/g, ' '))) {
@@ -221,34 +241,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
         }
       }
     });
-
-    // Pain flags from context
-    if (active.pain.intensidade >= 2 && active.pain.regiao === 'lombar') flags.push('DOR02');
-    if (active.pain.intensidade >= 3 && active.pain.regiao === 'lombar') flags.push('DOR03');
-    if (active.pain.intensidade >= 2 && active.pain.regiao === 'joelho') flags.push('DOR04');
-    if (active.pain.intensidade >= 2 && active.pain.regiao === 'cervical') flags.push('DOR06');
-    if (active.pain.intensidade >= 2 && active.pain.regiao === 'ombro') flags.push('DOR07');
-
-    // Context flags from assessment
-    if (active.context.calcado === 'amortecido' || active.context.calcado === 'instável') flags.push('CTX01');
-    const age = Number(active.context.idade);
-    if (age && age > 70) flags.push('CTX02');
-
-    // Trauma como bloqueio primário: fraturas/próteses/retirada óssea forçam contexto de fragilidade óssea
-    if (traumaContext?.findings.some(f => ['TRM01', 'TRM04', 'TRM06'].includes(f.code))) {
-      flags.push('CTX04');
-    }
-
-    if (flags.length > 0) {
-      const input: DiagnosticInput = { flags };
-      const report = generateDiagnosticReport(input);
-      setLocalDiagnostics(report);
-      setFailSafes(report.failSafes);
-      setNmAlerts(report.neuroMetabolicAlerts);
-    }
-
-    // Matriz de Prescrição e Intervenção Tecnológica (doc oficial 9FIT Ecosystem)
-    setPrescriptionRows(getPrescriptionMatrixForFlags(flags));
+    setAiFlagCodes(flags);
   };
 
   const buildGPSMapping = (report: AIReport) => {
@@ -266,9 +259,55 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
     setGpsMapping(gps);
   };
 
+  // ---- Flags: foto (com lado) + avaliador + IA + questionario/dor/trauma ----
+  const photoFlags: DetectedFlag[] = useMemo(() => flagsFromFindings(realFindings, realMetrics), [realFindings, realMetrics]);
+
+  const allFlags: DetectedFlag[] = useMemo(() => {
+    const extra: DetectedFlag[] = [];
+    const add = (code: string, source: DetectedFlag['source']) => extra.push({ code, sides: [], severity: 2, source });
+    manualFlags.forEach(c => add(c, 'avaliador'));
+    aiFlagCodes.forEach(c => add(c, 'ia'));
+    const pain = active.pain;
+    if (pain.intensidade >= 2 && pain.regiao === 'lombar') add('DOR02', 'questionario');
+    if (pain.intensidade >= 3 && pain.regiao === 'lombar') add('DOR03', 'questionario');
+    if (pain.intensidade >= 2 && pain.regiao === 'joelho') add('DOR04', 'questionario');
+    if (pain.intensidade >= 2 && pain.regiao === 'cervical') add('DOR06', 'questionario');
+    if (pain.intensidade >= 2 && pain.regiao === 'ombro') add('DOR07', 'questionario');
+    if (active.context.calcado === 'amortecido' || active.context.calcado === 'instável') add('CTX01', 'questionario');
+    const age = Number(active.context.idade);
+    if (age && age > 70) add('CTX02', 'questionario');
+    if (traumaContext?.findings.some(f => ['TRM01', 'TRM04', 'TRM06'].includes(f.code))) add('CTX04', 'questionario');
+    return [...photoFlags, ...extra];
+  }, [photoFlags, manualFlags, aiFlagCodes, active.pain, active.context, traumaContext]);
+
+  const allFlagCodes = useMemo(() => Array.from(new Set(allFlags.map(f => f.code))), [allFlags]);
+
+  const localDiagnostics = useMemo(
+    () => (allFlagCodes.length > 0 ? generateDiagnosticReport({ flags: allFlagCodes } as DiagnosticInput) : null),
+    [allFlagCodes]
+  );
+  const failSafes: FailSafeResult | null = localDiagnostics?.failSafes ?? null;
+  const nmAlerts: NeuroMetabolicAlert[] = localDiagnostics?.neuroMetabolicAlerts ?? [];
+  const prescriptionRows: PrescriptionMatrixRow[] = useMemo(() => getPrescriptionMatrixForFlags(allFlagCodes), [allFlagCodes]);
+
+  const prescription = useMemo(() => buildPrescription(allFlags, {
+    forcedShield: !!failSafes?.forced_mode,
+    suspendAll: allFlagCodes.includes('NM02'),
+    blocked: failSafes?.blocked_exercises || [],
+  }), [allFlags, failSafes, allFlagCodes]);
+
+  const photoWarnings = realMetrics.filter(m => m.key.startsWith('warning_') && m.unit).map(m => m.unit as string);
+
+  const toggleManual = (code: string) =>
+    setManualFlags(prev => (prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]));
+
+  // Keypoints no formato do AnalyticCanvas: nomes em ingles, coordenadas em pixels da foto exibida
   const realKeypoints = realMetrics
-    .filter(m => m.key.startsWith('keypoint_'))
-    .map(m => ({ name: m.key.replace('keypoint_', ''), x: m.value, y: Number(m.unit) || 0, confidence: 0.9 }));
+    .map(m => {
+      const mt = m.key.match(/^keypoint_(.+)_(anterior|posterior|lateral_d|lateral_e)$/);
+      return mt && mt[2] === photoView ? { name: mt[1], x: m.value, y: Number(m.unit) || 0, confidence: 0.9 } : null;
+    })
+    .filter((k): k is { name: string; x: number; y: number; confidence: number } => !!k);
 
   const demoKeypoints = [
     { name: 'nose', x: 250, y: 60, confidence: 0.95 },
@@ -289,7 +328,12 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
   const findingsForDisplay = aiReport
     ? aiReport.findings_analysis.map(f => ({ key: f.key, direction: f.direction, severity: f.severity, confidence: f.confidence, clinical_note: f.clinical_note }))
     : realFindings.length > 0
-    ? realFindings.map(f => ({ key: f.finding_key, direction: f.direction || 'anterior', severity: f.severity, confidence: f.confidence || 0, clinical_note: '' }))
+    ? realFindings.map(f => {
+        const sides = photoFlags.find(p => p.code === f.finding_key)?.sides || [];
+        const label = MUSCLE_MAP[f.finding_key]?.label;
+        const st = MUSCLE_MAP[f.finding_key]?.unilateral ? sideText(sides) : '';
+        return { key: f.finding_key, direction: f.direction || 'anterior', severity: f.severity, confidence: f.confidence || 0, clinical_note: label ? `${label}${st ? ` — ${st}` : ''}` : '' };
+      })
     : [];
 
   const risks = aiReport ? aiReport.risk_assessment : { lumbar_risk: 0, cervical_risk: 0, base_risk: 0, overall_score: 0 };
@@ -339,9 +383,10 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
         },
       });
 
-      if (error) { toast.error('Erro ao analisar relatório.'); setStatus('idle'); return; }
+      if (error) { toast.error('Erro ao analisar relatório. Você pode usar "Gerar relatório sem IA".'); setStatus('idle'); return; }
       if (data?.status === 'error') { toast.error(data.error); setStatus('idle'); return; }
       if (data?.report) {
+        setAiSource('gemini');
         setAiReport(data.report);
         runLocalDiagnostics(data.report.findings_analysis);
         buildGPSMapping(data.report);
@@ -357,6 +402,20 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
     } finally { setIsAnalyzing(false); }
   };
 
+  const handleLocalReport = () => {
+    if (!active.assessmentId) { toast.error('Selecione uma avaliação.'); return; }
+    if (prescription.entries.length === 0 && realFindings.length === 0) {
+      toast.error('Sem achados ainda. Faça a coleta de fotos ou confirme achados na aba Prescrição.');
+      return;
+    }
+    const rep = buildLocalReport(prescription, findingsForDisplay.map(f => ({ key: f.key, direction: f.direction, severity: f.severity, confidence: f.confidence })));
+    setAiSource('local');
+    setAiReport(rep as unknown as AIReport);
+    buildGPSMapping(rep as unknown as AIReport);
+    setStatus('analisado');
+    toast.success('Relatório gerado por regras locais. Salve para poder publicar.');
+  };
+
   const handleSaveReport = async () => {
     if (!aiReport || !active.assessmentId) return;
     setIsSaving(true);
@@ -365,7 +424,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
       if (!user) throw new Error('Não autenticado');
 
       const { data: runData, error: runError } = await supabase.from('ppa_analysis_runs' as any).insert({
-        assessment_id: active.assessmentId, status: 'concluido', model_version: 'gemini-3-flash',
+        assessment_id: active.assessmentId, status: 'concluido', model_version: aiSource === 'local' ? 'regras-locais' : 'gemini-3-flash',
         confidence_final: aiReport.confidence_score, dominant_vector: { archetype: aiReport.postural_archetype, mode: aiReport.operational_mode },
       }).select('id').single();
       if (runError) throw runError;
@@ -389,7 +448,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
         analysis_run_id: runId,
         macro_state: failSafes?.forced_mode || aiReport.operational_mode,
         risk_level: aiReport.risk_assessment.overall_score > 70 ? 'alto' : aiReport.risk_assessment.overall_score > 40 ? 'moderado' : 'baixo',
-        decided_by: 'gemini-auto',
+        decided_by: aiSource === 'local' ? 'regras-locais' : 'gemini-auto',
         micro_states: [
           ...aiReport.guardrails.filter(g => g.triggered).map(g => g.code),
           ...(failSafes?.alerts.map(a => a.type) || []),
@@ -404,6 +463,9 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
           fail_safes: failSafes,
           neuro_metabolic_alerts: nmAlerts,
           trauma_context: traumaContext,
+          prescription,
+          manual_flags: manualFlags,
+          ai_source: aiSource,
         },
       });
 
@@ -504,7 +566,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
 
       {aiReport && (
         <Alert><Brain className="h-4 w-4" /><AlertDescription>
-          <strong>Diagnóstico Gemini:</strong> {aiReport.macro_diagnosis}
+          <strong>{aiSource === 'local' ? 'Diagnóstico (regras locais):' : 'Diagnóstico Gemini:'}</strong> {aiReport.macro_diagnosis}
           <div className="flex items-center gap-2 mt-1">
             <Badge variant="outline">{aiReport.postural_archetype}</Badge>
             <span className="text-xs text-muted-foreground">Confiança: {Math.round(aiReport.confidence_score * 100)}%</span>
@@ -554,11 +616,12 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-7 w-full">
+        <TabsList className="grid grid-cols-8 w-full">
           <TabsTrigger value="overview" className="text-xs">Riscos</TabsTrigger>
           <TabsTrigger value="analysis" className="text-xs">Análise</TabsTrigger>
           <TabsTrigger value="heatmap" className="text-xs">Calor</TabsTrigger>
           <TabsTrigger value="findings" className="text-xs">Achados</TabsTrigger>
+          <TabsTrigger value="prescricao" className="text-xs">Prescrição</TabsTrigger>
           <TabsTrigger value="safety" className="text-xs">Segurança</TabsTrigger>
           <TabsTrigger value="gps" className="text-xs">GPS</TabsTrigger>
           <TabsTrigger value="protocol" className="text-xs" disabled={!aiReport}>Protocolo</TabsTrigger>
@@ -624,6 +687,15 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
           )}
         </TabsContent>
 
+        <TabsContent value="prescricao">
+          <PrescriptionPanel
+            prescription={prescription}
+            manualFlags={manualFlags}
+            onToggleManual={toggleManual}
+            photoWarnings={photoWarnings}
+          />
+        </TabsContent>
+
         {/* SAFETY TAB — Fail-Safes + Neuro-Metabolic */}
         <TabsContent value="safety" className="space-y-4">
           <Card>
@@ -659,7 +731,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Execute a análise para verificar fail-safes (L1-S1, ADM Joelho, Stop Signs).</p>
+                <p className="text-sm text-muted-foreground">Nenhum fail-safe ativo com os achados atuais (L1-S1, ADM Joelho, Stop Signs).</p>
               )}
             </CardContent>
           </Card>
@@ -823,6 +895,11 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
           {isAnalyzing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Brain className="h-4 w-4 mr-2" />}
           {isAnalyzing ? 'Analisando...' : aiReport ? 'Reanalisar' : 'Analisar com Gemini'}
         </Button>
+        {!aiReport && (
+          <Button variant="secondary" onClick={handleLocalReport}>
+            <FileText className="h-4 w-4 mr-2" /> Gerar relatório sem IA
+          </Button>
+        )}
         {aiReport && status !== 'pronto' && (
           <Button variant="outline" onClick={handleSaveReport} disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
@@ -837,6 +914,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
             aiReport={aiReport}
             failSafes={failSafes}
             nmAlerts={nmAlerts}
+            prescription={prescription}
           />
         )}
         {(aiReport && status === 'pronto') && (
