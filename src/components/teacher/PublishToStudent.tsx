@@ -8,6 +8,7 @@ import { Send, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateStudentDeliverable, StretchingPlanItem, StudentRecommendation } from '@/utils/studentReportGenerator';
+import type { Prescription } from '@/services/prescriptionService';
 
 interface Props {
   studentId: string;
@@ -17,6 +18,7 @@ interface Props {
   aiReport?: any;
   failSafes?: any;
   nmAlerts?: any[];
+  prescription?: Prescription | null;
   // Fallback manual (uso legado / edição fina antes de publicar)
   initialReportHtml?: string;
   initialRecommendations?: any[];
@@ -29,6 +31,7 @@ export const PublishToStudent = ({
   aiReport,
   failSafes,
   nmAlerts,
+  prescription,
   initialReportHtml = '',
   initialRecommendations = [],
 }: Props) => {
@@ -42,7 +45,7 @@ export const PublishToStudent = ({
   // Gera automaticamente a entrega (relatório + recomendações + plano) a partir do aiReport
   useEffect(() => {
     if (aiReport) {
-      const deliverable = generateStudentDeliverable({ studentName, aiReport, failSafes, nmAlerts });
+      const deliverable = generateStudentDeliverable({ studentName, aiReport, failSafes, nmAlerts, prescription });
       setHtml(deliverable.report_html);
       setRecsList(deliverable.recommendations);
       setStretchingPlan(deliverable.stretching_plan);
@@ -54,7 +57,7 @@ export const PublishToStudent = ({
         is_alert: false,
       })));
     }
-  }, [aiReport, studentName, failSafes, nmAlerts]);
+  }, [aiReport, studentName, failSafes, nmAlerts, prescription]);
 
   const recsText = recsList.map(r => r.text).join('\n');
   const setRecsFromText = (text: string) => {
@@ -112,7 +115,7 @@ export const PublishToStudent = ({
           <div>
             <Label>Plano de Alongamento ({stretchingPlan.length} exercícios)</Label>
             <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-muted/30">
-              {stretchingPlan.length === 0 && <p className="text-xs text-muted-foreground">Nenhum exercício gerado ainda. Rode a análise com Gemini primeiro.</p>}
+              {stretchingPlan.length === 0 && <p className="text-xs text-muted-foreground">Nenhum exercício gerado (sem achados, ou treino suspenso por segurança).</p>}
               {stretchingPlan.map(item => (
                 <div key={item.order} className="text-sm flex items-center justify-between border-b last:border-0 pb-1">
                   <span>{item.order}. {item.name}</span>
