@@ -1,12 +1,17 @@
 // ============================================
-// PONTE CENTRAL: foto -> pose real (MediaPipe) -> achados/flags -> banco
-// Usado por MediaCollector (fluxo normal) e ExpressAnalysis (fluxo rápido).
-// Sem isso, ppa_findings/ppa_metrics nunca eram populados e o botão
-// "Analisar com Gemini" no ResultsHUD ficava bloqueado pra sempre.
+// PONTE CENTRAL: foto -> pose real (MediaPipe) -> geometria por vista -> achados/metricas
+// Usado por MediaCollector (fluxo normal) e ExpressAnalysis (fluxo rapido).
+//
+// Convencoes gravadas (sem mudar o schema):
+//  - ppa_findings.finding_key = codigo da flag (PEP13, PEP04...)
+//  - ppa_metrics `side_<codigo>`    : unit = lados afetados ('D' | 'E' | 'D,E'), value = severidade
+//  - ppa_metrics `measure_<codigo>` : value = medida (% do tronco/perna), unit = referencial
+//  - ppa_metrics `keypoint_<nome_en>_<vista>` : value = x em PIXELS, unit = y em PIXELS
+//  - ppa_metrics `warning_<n>`      : unit = mensagem de aviso (vista errada, camera torta...)
 // ============================================
 
-import { detectPoseFromImage, detectPosturalDeviations } from './poseDetectionService';
-import { convertAnalysisToFlags, deduplicateFlags, enrichFlags } from './flagConversionService';
+import { detectPoseFromImage } from './poseDetectionService';
+import { analyzePostureGeometry, KEYPOINT_NAMES_EN, PostureFlag, Side } from './postureGeometry';
 
 export interface PoseAnalysisFinding {
   key: string;
@@ -41,15 +46,22 @@ function directionFromView(view: string): string {
   return 'anterior';
 }
 
-/**
- * Roda o MediaPipe Pose real em cada foto, extrai desvios posturais geométricos
- * e converte em flags clínicas padronizadas (PEP/DYN/etc), prontas para gravar
- * em ppa_findings e ppa_metrics.
- */
+function loadImageSize(url: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+    img.src = url;
+  });
+}
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
 export async function runPoseAnalysisOnPhotos(photos: PhotoInput[]): Promise<PoseAnalysisResult> {
-  const allFindings: PoseAnalysisFinding[] = [];
-  const allMetrics: PoseAnalysisMetric[] = [];
   const warnings: string[] = [];
+  const metrics: PoseAnalysisMetric[] = [];
+  const flags: PostureFlag[] = [];
   let posesDetected = 0;
 
   for (const photo of photos) {
@@ -60,58 +72,50 @@ export async function runPoseAnalysisOnPhotos(photos: PhotoInput[]): Promise<Pos
         continue;
       }
       posesDetected++;
+      const { w, h } = await loadImageSize(photo.imageUrl);
 
-      // Salva keypoints com confiança suficiente como métricas (usados no AnalyticCanvas)
-      pose.keypoints.forEach(kp => {
-        if (kp.confidence < 0.5) return;
-        allMetrics.push({
-          key: `keypoint_${kp.name}_${photo.view}`,
-          value: kp.x,
-          unit: String(kp.y),
-          severity: 1,
-        });
+      // Keypoints em pixels, nomes em ingles (formato que o AnalyticCanvas desenha)
+      Object.entries(KEYPOINT_NAMES_EN).forEach(([idx, name]) => {
+        const kp = pose.keypoints[Number(idx)];
+        if (!kp || kp.confidence < 0.5) return;
+        metrics.push({ key: `keypoint_${name}_${photo.view}`, value: r1(kp.x * w), unit: String(r1(kp.y * h)), severity: 1 });
       });
 
-      const deviations = detectPosturalDeviations(pose.keypoints);
-      const analysisFindings = deviations.map(d => ({
-        name: d.deviation,
-        value: d.measurement,
-        severity: d.severity,
-        angle: d.angle,
-      }));
-
-      const flags = enrichFlags(
-        deduplicateFlags(convertAnalysisToFlags({ type: 'pose', findings: analysisFindings }))
-      );
-
-      flags.forEach(f => {
-        allFindings.push({
-          key: f.code,
-          direction: directionFromView(photo.view),
-          severity: f.severity,
-          confidence: (f.confidence || 75) / 100,
-        });
-      });
+      const geo = analyzePostureGeometry(pose.keypoints, photo.view, w, h);
+      flags.push(...geo.flags);
+      geo.metrics.forEach(m => metrics.push({ key: m.key, value: m.value, unit: m.unit, severity: 1 }));
+      geo.warnings.forEach(wn => warnings.push(wn));
     } catch (err) {
       console.error(`Erro na análise de pose (${photo.view}):`, err);
       warnings.push(`Falha ao processar ${photo.view}: ${(err as Error).message}`);
     }
   }
 
-  // Dedup por flag, mantém a maior severidade encontrada entre as vistas
-  const dedupedMap = new Map<string, PoseAnalysisFinding>();
-  allFindings.forEach(f => {
-    const existing = dedupedMap.get(f.key);
-    if (!existing || f.severity > existing.severity) dedupedMap.set(f.key, f);
+  // Agrega por codigo: maior severidade/confianca, uniao dos lados
+  const byCode = new Map<string, { sev: number; conf: number; dir: string; sides: Set<Side>; measure: number; unit: string }>();
+  flags.forEach(f => {
+    const cur = byCode.get(f.code) || { sev: 0, conf: 0, dir: directionFromView(f.view), sides: new Set<Side>(), measure: 0, unit: f.unit };
+    if (f.severity > cur.sev) { cur.sev = f.severity; cur.dir = directionFromView(f.view); }
+    cur.conf = Math.max(cur.conf, f.confidence);
+    if (f.side) cur.sides.add(f.side);
+    if (f.measurement > cur.measure) { cur.measure = f.measurement; cur.unit = f.unit; }
+    byCode.set(f.code, cur);
   });
 
-  return {
-    findings: Array.from(dedupedMap.values()),
-    metrics: allMetrics,
-    posesDetected,
-    photosAnalyzed: photos.length,
-    warnings,
-  };
+  const findings: PoseAnalysisFinding[] = [];
+  byCode.forEach((v, code) => {
+    findings.push({ key: code, direction: v.dir, severity: v.sev, confidence: v.conf });
+    if (v.sides.size > 0) {
+      metrics.push({ key: `side_${code}`, value: v.sev, unit: Array.from(v.sides).sort().join(','), severity: v.sev });
+    }
+    metrics.push({ key: `measure_${code}`, value: v.measure, unit: v.unit, severity: v.sev });
+  });
+
+  Array.from(new Set(warnings)).forEach((msg, i) => {
+    metrics.push({ key: `warning_${i + 1}`, value: 1, unit: msg, severity: 1 });
+  });
+
+  return { findings, metrics, posesDetected, photosAnalyzed: photos.length, warnings };
 }
 
 export default { runPoseAnalysisOnPhotos };
