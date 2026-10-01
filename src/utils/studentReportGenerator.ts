@@ -6,6 +6,10 @@
 // ============================================
 
 import { translateFlagsForStudent, StudentFlagTranslation } from './flagTranslator';
+import { Prescription, prescriptionToPlan, prescriptionToRecommendations, prescriptionSummary } from '@/services/prescriptionService';
+
+const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+const norm = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
 
 export interface StretchingPlanItem {
   order: number;
@@ -14,7 +18,7 @@ export interface StretchingPlanItem {
   reps_or_time: string; // ex: '30s' ou '10 reps'
   video_url: string | null;
   notes: string;
-  category: 'liberacao' | 'ativacao' | 'integracao';
+  category: 'liberacao' | 'alongamento' | 'ativacao' | 'fortalecimento' | 'integracao';
 }
 
 export interface StudentRecommendation {
@@ -66,8 +70,8 @@ function parseProtocolLine(line: string, order: number, category: StretchingPlan
   const reps_or_time = timeMatch ? `${timeMatch[1]}s` : repsMatch ? `${repsMatch[1]} reps` : '30s';
   const sets = setsMatch ? Number(setsMatch[1]) : 3;
 
-  // nome = frase sem os números de dose, capitalizado
-  const cleanName = line.replace(/\(.*?\)/g, '').trim();
+  const paren = line.match(/\((.*?)\)/);
+  const cleanName = line.replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
 
   return {
     order,
@@ -75,7 +79,7 @@ function parseProtocolLine(line: string, order: number, category: StretchingPlan
     sets,
     reps_or_time,
     video_url: null,
-    notes: '',
+    notes: paren ? paren[1] : '',
     category,
   };
 }
@@ -124,7 +128,8 @@ function buildRecommendations(
 function buildReportHtml(
   studentName: string,
   aiReport: AIReportLike,
-  translatedFlags: StudentFlagTranslation[]
+  translatedFlags: StudentFlagTranslation[],
+  prescription?: Prescription | null
 ): string {
   const alertFlags = translatedFlags.filter(f => f.is_alert);
   const normalFlags = translatedFlags.filter(f => !f.is_alert);
@@ -133,19 +138,27 @@ function buildReportHtml(
     ? `<div style="background:#fff7ed;border-left:4px solid #f97316;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
          <strong style="color:#c2410c;">⚠️ Pontos de atenção</strong>
          <ul style="margin:8px 0 0;padding-left:20px;">
-           ${alertFlags.map(f => `<li><strong>${f.simple_name}:</strong> ${f.simple_reason}</li>`).join('')}
+           ${alertFlags.map(f => `<li><strong>${esc(f.simple_name)}:</strong> ${esc(f.simple_reason)}</li>`).join('')}
          </ul>
        </div>`
     : '';
 
   const findingsBlock = normalFlags.length
     ? `<ul style="padding-left:20px;">
-         ${normalFlags.map(f => `<li><strong>${f.simple_name}:</strong> ${f.simple_reason}</li>`).join('')}
+         ${normalFlags.map(f => `<li><strong>${esc(f.simple_name)}:</strong> ${esc(f.simple_reason)}</li>`).join('')}
        </ul>`
     : '<p>Nenhum ponto crítico identificado nesta avaliação.</p>';
 
+  const sum = prescription && !prescription.suspendAll ? prescriptionSummary(prescription) : null;
+  const list = (arr: string[]) => arr.map(x => `<li>${esc(x)}</li>`).join('');
+  const workBlock = sum && (sum.liberar.length || sum.alongar.length || sum.fortalecer.length)
+    ? `<h3 style="color:#111827;margin-top:20px;">O que vamos trabalhar</h3>
+       ${[...sum.liberar, ...sum.alongar].length ? `<p style="color:#374151;margin-bottom:4px;"><strong>Soltar e alongar:</strong></p><ul style="padding-left:20px;">${list(Array.from(new Set([...sum.liberar, ...sum.alongar])))}</ul>` : ''}
+       ${sum.fortalecer.length ? `<p style="color:#374151;margin-bottom:4px;"><strong>Fortalecer:</strong></p><ul style="padding-left:20px;">${list(sum.fortalecer)}</ul>` : ''}`
+    : '';
+
   return `
-<h2 style="color:#111827;">Olá, ${studentName}! 👋</h2>
+<h2 style="color:#111827;">Olá, ${esc(studentName)}! 👋</h2>
 <p style="color:#374151;">Aqui está o resumo da sua avaliação postural.</p>
 
 ${alertBlock}
@@ -153,8 +166,10 @@ ${alertBlock}
 <h3 style="color:#111827;margin-top:20px;">O que encontramos</h3>
 ${findingsBlock}
 
+${workBlock}
+
 <h3 style="color:#111827;margin-top:20px;">Resumo</h3>
-<p style="color:#374151;">${aiReport.clinical_summary}</p>
+<p style="color:#374151;">${esc(aiReport.clinical_summary)}</p>
 
 <p style="color:#6b7280;font-size:13px;margin-top:24px;">Confira seu plano de alongamento na aba "Meu Plano".</p>
 `.trim();
@@ -169,16 +184,41 @@ export function generateStudentDeliverable(params: {
   aiReport: AIReportLike;
   failSafes?: FailSafeLike | null;
   nmAlerts?: NmAlertLike[];
+  prescription?: Prescription | null;
 }): StudentDeliverable {
-  const { studentName, aiReport, failSafes, nmAlerts } = params;
+  const { studentName, aiReport, failSafes, nmAlerts, prescription } = params;
 
   const codes = aiReport.findings_analysis.map(f => f.key).filter(Boolean);
   const translatedFlags = translateFlagsForStudent(codes);
 
+  const recommendations = [
+    ...(prescription ? prescriptionToRecommendations(prescription) : []),
+    ...buildRecommendations(aiReport.findings_analysis, failSafes, nmAlerts),
+  ];
+
+  // Plano: prescricao deterministica primeiro; itens da IA so complementam,
+  // sem duplicar e SEM violar os exercicios bloqueados pelos fail-safes.
+  let plan: StretchingPlanItem[] = prescription ? prescriptionToPlan(prescription) : [];
+  const blocked = (failSafes?.blocked_exercises || []).map(norm).filter(b => b.length > 3);
+  const suspended = !!prescription?.suspendAll;
+  if (!suspended && !prescription?.shield) {
+    const seen = new Set(plan.map(i => norm(i.name)));
+    let order = plan.length + 1;
+    buildStretchingPlan(aiReport.recovery_protocol).forEach(item => {
+      const n = norm(item.name);
+      if (seen.has(n) || blocked.some(b => n.includes(b) || b.includes(n))) return;
+      if (plan.length >= 16) return;
+      seen.add(n);
+      plan.push({ ...item, order: order++ });
+    });
+  } else if (!prescription) {
+    plan = buildStretchingPlan(aiReport.recovery_protocol).filter(i => !blocked.some(b => norm(i.name).includes(b)));
+  }
+
   return {
-    report_html: buildReportHtml(studentName, aiReport, translatedFlags),
-    recommendations: buildRecommendations(aiReport.findings_analysis, failSafes, nmAlerts),
-    stretching_plan: buildStretchingPlan(aiReport.recovery_protocol),
+    report_html: buildReportHtml(studentName, aiReport, translatedFlags, prescription),
+    recommendations,
+    stretching_plan: plan.map((it, i) => ({ ...it, order: i + 1 })),
   };
 }
 
