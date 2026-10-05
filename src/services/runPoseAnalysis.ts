@@ -6,12 +6,14 @@
 //  - ppa_findings.finding_key = codigo da flag (PEP13, PEP04...)
 //  - ppa_metrics `side_<codigo>`    : unit = lados afetados ('D' | 'E' | 'D,E'), value = severidade
 //  - ppa_metrics `measure_<codigo>` : value = medida (% do tronco/perna), unit = referencial
+//  - ppa_metrics `angle_<id>_<vista>` : value = graus, unit = classe ('normal'|'leve'|'significativo')
 //  - ppa_metrics `keypoint_<nome_en>_<vista>` : value = x em PIXELS, unit = y em PIXELS
 //  - ppa_metrics `warning_<n>`      : unit = mensagem de aviso (vista errada, camera torta...)
 // ============================================
 
 import { detectPoseFromImage } from './poseDetectionService';
 import { analyzePostureGeometry, KEYPOINT_NAMES_EN, PostureFlag, Side } from './postureGeometry';
+import { computeBiomechAngles } from './biomechAngles';
 
 export interface PoseAnalysisFinding {
   key: string;
@@ -85,6 +87,11 @@ export async function runPoseAnalysisOnPhotos(photos: PhotoInput[]): Promise<Pos
       flags.push(...geo.flags);
       geo.metrics.forEach(m => metrics.push({ key: m.key, value: m.value, unit: m.unit, severity: 1 }));
       geo.warnings.forEach(wn => warnings.push(wn));
+
+      // Angulos em graus para o painel de metricas biomecanicas
+      computeBiomechAngles(pose.keypoints, photo.view, w, h).forEach(a =>
+        metrics.push({ key: `angle_${a.id}_${photo.view}`, value: a.value, unit: a.cls, severity: a.cls === 'normal' ? 1 : a.cls === 'leve' ? 2 : 3 })
+      );
     } catch (err) {
       console.error(`Erro na análise de pose (${photo.view}):`, err);
       warnings.push(`Falha ao processar ${photo.view}: ${(err as Error).message}`);

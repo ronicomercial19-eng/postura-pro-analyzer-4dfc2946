@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import {
   Users, BarChart3, BookOpen, Scan, Brain, Camera, TrendingUp, LayoutDashboard, Zap, LogOut,
-  Video, MessageSquare, Activity, FileText, ListChecks, Flame, Gauge
+  Video, MessageSquare, Activity, FileText, ListChecks, Flame, Gauge, ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -18,6 +18,7 @@ const Navigation = ({ activeSection, onSectionChange }: NavigationProps) => {
     { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
     { id: 'express', label: 'Express', icon: Zap },
     { id: 'clients', label: 'Alunos', icon: Users },
+    { id: 'tests-consent', label: 'Testes e Termo', icon: ClipboardCheck },
     { id: 'assessment-wizard', label: 'Avaliação Postura', icon: Scan },
     { id: 'movement-analyser', label: 'Mov. Analyser', icon: Video },
     { id: 'complaint-analyser', label: 'Queixa', icon: MessageSquare },

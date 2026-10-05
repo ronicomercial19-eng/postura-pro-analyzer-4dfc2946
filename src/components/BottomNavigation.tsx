@@ -1,4 +1,4 @@
-import { LayoutDashboard, TrendingUp, Zap, Users, Video, FileText, ListChecks } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Zap, Users, Video, FileText, ListChecks, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface BottomNavigationProps {
@@ -15,6 +15,7 @@ const BottomNavigation = ({ currentView, onViewChange }: BottomNavigationProps) 
     { id: 'express', label: 'Express', icon: Zap },
     { id: 'movement-analyser', label: 'Movim.', icon: Video },
     { id: 'clients', label: 'Alunos', icon: Users },
+    { id: 'tests-consent', label: 'Termo', icon: ClipboardCheck },
     { id: 'progress-dashboard', label: 'Evolução', icon: TrendingUp },
   ];
 

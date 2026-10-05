@@ -21,6 +21,7 @@ import StudentRecommendations from '@/components/student/StudentRecommendations'
 import StudentStretchingPlan from '@/components/student/StudentStretchingPlan';
 import FitProApiSettings from '@/components/pages/FitProApiSettings';
 import HighPerformanceEngine from '@/components/pages/HighPerformanceEngine';
+import TestsAndConsent from '@/components/pages/TestsAndConsent';
 import { useAuth } from '@/hooks/useAuth';
 import { useActiveAssessment } from '@/contexts/ActiveAssessmentContext';
 
@@ -42,6 +43,8 @@ const Index = () => {
         return <ExpressAnalysis onNavigate={setCurrentView} />;
       case 'clients':
         return <ClientManagement onNavigate={setCurrentView} />;
+      case 'tests-consent':
+        return <TestsAndConsent />;
       case 'assessment-wizard':
         return <AssessmentWizard onNavigate={setCurrentView} />;
       case 'movement-analyser':
