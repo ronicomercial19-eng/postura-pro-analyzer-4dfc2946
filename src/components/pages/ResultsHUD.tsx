@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User } from 'lucide-react';
 import PublishToStudent from '@/components/teacher/PublishToStudent';
 import PrescriptionPanel from '@/components/dashboard/PrescriptionPanel';
+import BiomechMetricsPanel from '@/components/dashboard/BiomechMetricsPanel';
 import { flagsFromFindings, buildPrescription, buildLocalReport, sideText, DetectedFlag } from '@/services/prescriptionService';
 import { MUSCLE_MAP } from '@/data/muscleMap';
 
@@ -634,6 +635,7 @@ const ResultsHUD = ({ onNavigate }: ResultsHUDProps) => {
         <TabsContent value="analysis">
           <AnalyticCanvas imageUrl={photoUrl} keypoints={keypoints} />
           {realKeypoints.length > 0 && <Badge className="mt-2 bg-green-100 text-green-800">Keypoints reais do MediaPipe</Badge>}
+          <BiomechMetricsPanel metrics={realMetrics} />
         </TabsContent>
 
         <TabsContent value="heatmap">
