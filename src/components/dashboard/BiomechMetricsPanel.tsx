@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import PhotoMetricsOverlay from '@/components/dashboard/PhotoMetricsOverlay';
 
 interface Metric { key: string; value: number; unit: string | null; severity: number }
 
@@ -50,10 +51,13 @@ const BiomechMetricsPanel = ({ metrics }: { metrics: Metric[] }) => {
           Ângulos 2D estimados a partir dos pontos do corpo. Referência de triagem; não é diagnóstico.
         </p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {views.map(view => (
-          <div key={view}>
-            <p className="text-xs font-semibold text-muted-foreground mb-1">{VIEW_LABEL[view]}</p>
+          <div key={view} className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">{VIEW_LABEL[view]}</p>
+            {metrics.some(m => m.key.startsWith('keypoint_') && m.key.endsWith(`_${view}`)) && (
+              <PhotoMetricsOverlay metrics={metrics} view={view} />
+            )}
             <div className="divide-y border rounded-lg">
               {groups[view].map(a => {
                 const c = CLS[a.cls] || CLS.normal;
