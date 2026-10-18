@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.12 (cd3cf9e)"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -72,226 +72,43 @@ export type Database = {
           last_saved?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "assessment_drafts_evaluation_id_fkey"
-            columns: ["evaluation_id"]
-            isOneToOne: true
-            referencedRelation: "evaluations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      evaluations: {
-        Row: {
-          adams_test: string | null
-          age: number | null
-          beighton_test: string | null
-          cobb_angle: number | null
-          complaints: string | null
-          cranio_cervical_angle: number | null
-          created_at: string | null
-          height: number | null
-          id: string
-          lumbar_lordosis: number | null
-          ober_test: string | null
-          observations: string | null
-          pelvic_imbalance: number | null
-          pelvic_tilt: number | null
-          scapular_abduction: string | null
-          scapular_elevation: string | null
-          shoulder_imbalance: number | null
-          squat_pattern: string | null
-          status: string | null
-          student_id: string | null
-          teacher_id: string | null
-          thomas_test: string | null
-          thoracic_kyphosis: number | null
-          title: string
-          updated_at: string | null
-          walking_pattern: string | null
-          weight: number | null
-        }
-        Insert: {
-          adams_test?: string | null
-          age?: number | null
-          beighton_test?: string | null
-          cobb_angle?: number | null
-          complaints?: string | null
-          cranio_cervical_angle?: number | null
-          created_at?: string | null
-          height?: number | null
-          id?: string
-          lumbar_lordosis?: number | null
-          ober_test?: string | null
-          observations?: string | null
-          pelvic_imbalance?: number | null
-          pelvic_tilt?: number | null
-          scapular_abduction?: string | null
-          scapular_elevation?: string | null
-          shoulder_imbalance?: number | null
-          squat_pattern?: string | null
-          status?: string | null
-          student_id?: string | null
-          teacher_id?: string | null
-          thomas_test?: string | null
-          thoracic_kyphosis?: number | null
-          title: string
-          updated_at?: string | null
-          walking_pattern?: string | null
-          weight?: number | null
-        }
-        Update: {
-          adams_test?: string | null
-          age?: number | null
-          beighton_test?: string | null
-          cobb_angle?: number | null
-          complaints?: string | null
-          cranio_cervical_angle?: number | null
-          created_at?: string | null
-          height?: number | null
-          id?: string
-          lumbar_lordosis?: number | null
-          ober_test?: string | null
-          observations?: string | null
-          pelvic_imbalance?: number | null
-          pelvic_tilt?: number | null
-          scapular_abduction?: string | null
-          scapular_elevation?: string | null
-          shoulder_imbalance?: number | null
-          squat_pattern?: string | null
-          status?: string | null
-          student_id?: string | null
-          teacher_id?: string | null
-          thomas_test?: string | null
-          thoracic_kyphosis?: number | null
-          title?: string
-          updated_at?: string | null
-          walking_pattern?: string | null
-          weight?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "evaluations_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "evaluations_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      exercicios: {
-        Row: {
-          created_at: string
-          id: number
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-        }
-        Update: {
-          created_at?: string
-          id?: number
-        }
         Relationships: []
       }
-      photos: {
+      fitpro_integration_tokens: {
         Row: {
-          ai_analysis: Json | null
-          created_at: string | null
-          evaluation_id: string | null
+          created_at: string
           id: string
-          image_url: string
-          is_validated: boolean | null
-          measurements: Json | null
-          view_type: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          teacher_id: string
+          token_hash: string
+          token_prefix: string
+          updated_at: string
         }
         Insert: {
-          ai_analysis?: Json | null
-          created_at?: string | null
-          evaluation_id?: string | null
+          created_at?: string
           id?: string
-          image_url: string
-          is_validated?: boolean | null
-          measurements?: Json | null
-          view_type: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          teacher_id: string
+          token_hash: string
+          token_prefix: string
+          updated_at?: string
         }
         Update: {
-          ai_analysis?: Json | null
-          created_at?: string | null
-          evaluation_id?: string | null
+          created_at?: string
           id?: string
-          image_url?: string
-          is_validated?: boolean | null
-          measurements?: Json | null
-          view_type?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          teacher_id?: string
+          token_hash?: string
+          token_prefix?: string
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "photos_evaluation_id_fkey"
-            columns: ["evaluation_id"]
-            isOneToOne: false
-            referencedRelation: "evaluations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      postural_analyses: {
-        Row: {
-          analysis_date: string | null
-          created_at: string | null
-          created_by: string
-          evaluation_id: string
-          exercise_protocols: Json | null
-          id: string
-          identified_patterns: Json | null
-          overall_score: number
-          recommendations: Json | null
-          risk_level: string
-          updated_at: string | null
-        }
-        Insert: {
-          analysis_date?: string | null
-          created_at?: string | null
-          created_by: string
-          evaluation_id: string
-          exercise_protocols?: Json | null
-          id?: string
-          identified_patterns?: Json | null
-          overall_score: number
-          recommendations?: Json | null
-          risk_level: string
-          updated_at?: string | null
-        }
-        Update: {
-          analysis_date?: string | null
-          created_at?: string | null
-          created_by?: string
-          evaluation_id?: string
-          exercise_protocols?: Json | null
-          id?: string
-          identified_patterns?: Json | null
-          overall_score?: number
-          recommendations?: Json | null
-          risk_level?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "postural_analyses_evaluation_id_fkey"
-            columns: ["evaluation_id"]
-            isOneToOne: false
-            referencedRelation: "evaluations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       ppa_analysis_runs: {
         Row: {
@@ -299,6 +116,7 @@ export type Database = {
           confidence_final: number | null
           created_at: string
           dominant_vector: Json | null
+          gait_analysis: Json | null
           id: string
           model_version: string | null
           status: string
@@ -308,6 +126,7 @@ export type Database = {
           confidence_final?: number | null
           created_at?: string
           dominant_vector?: Json | null
+          gait_analysis?: Json | null
           id?: string
           model_version?: string | null
           status?: string
@@ -317,6 +136,7 @@ export type Database = {
           confidence_final?: number | null
           created_at?: string
           dominant_vector?: Json | null
+          gait_analysis?: Json | null
           id?: string
           model_version?: string | null
           status?: string
@@ -422,7 +242,22 @@ export type Database = {
           student_id?: string
           weight_kg?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ppa_body_comp_assess_fk"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "ppa_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppa_body_comp_student_fk"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ppa_clusters: {
         Row: {
@@ -493,7 +328,82 @@ export type Database = {
           red_flags?: Json | null
           student_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ppa_complaint_assess_fk"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "ppa_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppa_complaint_student_fk"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppa_consents: {
+        Row: {
+          accepted_at: string
+          assessment_id: string | null
+          created_at: string
+          id: string
+          revoked_at: string | null
+          scopes: Json
+          signer_name: string
+          student_id: string
+          teacher_id: string
+          term_snapshot: string
+          term_version: string
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          assessment_id?: string | null
+          created_at?: string
+          id?: string
+          revoked_at?: string | null
+          scopes?: Json
+          signer_name: string
+          student_id: string
+          teacher_id: string
+          term_snapshot: string
+          term_version: string
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          assessment_id?: string | null
+          created_at?: string
+          id?: string
+          revoked_at?: string | null
+          scopes?: Json
+          signer_name?: string
+          student_id?: string
+          teacher_id?: string
+          term_snapshot?: string
+          term_version?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppa_consents_student_fk"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppa_consents_teacher_fk"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ppa_engine_decisions: {
         Row: {
@@ -570,6 +480,57 @@ export type Database = {
             columns: ["analysis_run_id"]
             isOneToOne: false
             referencedRelation: "ppa_analysis_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppa_functional_tests: {
+        Row: {
+          assessment_id: string | null
+          classification: string | null
+          created_at: string
+          data: Json
+          id: string
+          performed_at: string
+          student_id: string
+          teacher_id: string
+          test_type: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          classification?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          performed_at?: string
+          student_id: string
+          teacher_id: string
+          test_type: string
+        }
+        Update: {
+          assessment_id?: string | null
+          classification?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          performed_at?: string
+          student_id?: string
+          teacher_id?: string
+          test_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppa_ft_student_fk"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppa_ft_teacher_fk"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -672,6 +633,7 @@ export type Database = {
           session_id: string | null
           student_id: string
           tns: number | null
+          tremor_events: Json | null
         }
         Insert: {
           created_at?: string
@@ -682,6 +644,7 @@ export type Database = {
           session_id?: string | null
           student_id: string
           tns?: number | null
+          tremor_events?: Json | null
         }
         Update: {
           created_at?: string
@@ -692,6 +655,7 @@ export type Database = {
           session_id?: string | null
           student_id?: string
           tns?: number | null
+          tremor_events?: Json | null
         }
         Relationships: [
           {
@@ -706,43 +670,60 @@ export type Database = {
       ppa_movement_analyses: {
         Row: {
           ai_summary: string | null
+          angle_trajectory: Json | null
           assessment_id: string
           created_at: string
           detected_faults: Json | null
           exercise_type: string
           id: string
           keypoint_trajectory: Json | null
+          pattern_match: string | null
+          protocol_key: string | null
           rom_data: Json | null
           video_url: string | null
         }
         Insert: {
           ai_summary?: string | null
+          angle_trajectory?: Json | null
           assessment_id: string
           created_at?: string
           detected_faults?: Json | null
           exercise_type: string
           id?: string
           keypoint_trajectory?: Json | null
+          pattern_match?: string | null
+          protocol_key?: string | null
           rom_data?: Json | null
           video_url?: string | null
         }
         Update: {
           ai_summary?: string | null
+          angle_trajectory?: Json | null
           assessment_id?: string
           created_at?: string
           detected_faults?: Json | null
           exercise_type?: string
           id?: string
           keypoint_trajectory?: Json | null
+          pattern_match?: string | null
+          protocol_key?: string | null
           rom_data?: Json | null
           video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ppa_movement_assess_fk"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "ppa_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ppa_plan_links: {
         Row: {
           active: boolean
-          analysis_run_id: string
+          analysis_run_id: string | null
           created_at: string
           id: string
           periodizer_plan_id: string | null
@@ -750,11 +731,12 @@ export type Database = {
           recommendations: Json | null
           report_html: string | null
           smart_treino_plan_id: string | null
+          stretching_plan: Json | null
           student_id: string
         }
         Insert: {
           active?: boolean
-          analysis_run_id: string
+          analysis_run_id?: string | null
           created_at?: string
           id?: string
           periodizer_plan_id?: string | null
@@ -762,11 +744,12 @@ export type Database = {
           recommendations?: Json | null
           report_html?: string | null
           smart_treino_plan_id?: string | null
+          stretching_plan?: Json | null
           student_id: string
         }
         Update: {
           active?: boolean
-          analysis_run_id?: string
+          analysis_run_id?: string | null
           created_at?: string
           id?: string
           periodizer_plan_id?: string | null
@@ -774,6 +757,7 @@ export type Database = {
           recommendations?: Json | null
           report_html?: string | null
           smart_treino_plan_id?: string | null
+          stretching_plan?: Json | null
           student_id?: string
         }
         Relationships: [
@@ -823,6 +807,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ppa_sprint_assessments: {
+        Row: {
+          assessment_id: string | null
+          cardiovascular_recovery_ok: boolean
+          created_at: string
+          forward_head_posture_detected: boolean
+          id: string
+          peak_speed_kmh: number
+          result: Json
+          stride_frequency_hz: number | null
+          student_id: string
+          thoracic_mobility_restricted: boolean
+        }
+        Insert: {
+          assessment_id?: string | null
+          cardiovascular_recovery_ok?: boolean
+          created_at?: string
+          forward_head_posture_detected?: boolean
+          id?: string
+          peak_speed_kmh?: number
+          result: Json
+          stride_frequency_hz?: number | null
+          student_id: string
+          thoracic_mobility_restricted?: boolean
+        }
+        Update: {
+          assessment_id?: string | null
+          cardiovascular_recovery_ok?: boolean
+          created_at?: string
+          forward_head_posture_detected?: boolean
+          id?: string
+          peak_speed_kmh?: number
+          result?: Json
+          stride_frequency_hz?: number | null
+          student_id?: string
+          thoracic_mobility_restricted?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppa_sprint_assessments_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "ppa_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppa_sprint_student_fk"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -852,41 +890,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      reports: {
-        Row: {
-          created_at: string | null
-          evaluation_id: string | null
-          id: string
-          is_shared: boolean | null
-          pdf_url: string | null
-          share_token: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          evaluation_id?: string | null
-          id?: string
-          is_shared?: boolean | null
-          pdf_url?: string | null
-          share_token?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          evaluation_id?: string | null
-          id?: string
-          is_shared?: boolean | null
-          pdf_url?: string | null
-          share_token?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reports_evaluation_id_fkey"
-            columns: ["evaluation_id"]
-            isOneToOne: false
-            referencedRelation: "evaluations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       students: {
         Row: {
@@ -924,36 +927,6 @@ export type Database = {
           },
         ]
       }
-      user_feedback: {
-        Row: {
-          created_at: string | null
-          id: string
-          message: string
-          status: string | null
-          type: string
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          message: string
-          status?: string | null
-          type: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          message?: string
-          status?: string | null
-          type?: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
@@ -985,25 +958,6 @@ export type Database = {
         Returns: undefined
       }
       can_perform_action: { Args: { required_role: string }; Returns: boolean }
-      create_evaluation: {
-        Args: { p_student_id?: string; p_title: string }
-        Returns: {
-          evaluation_id: string
-          message: string
-          success: boolean
-        }[]
-      }
-      get_student_evaluations: {
-        Args: { student_id?: string }
-        Returns: {
-          created_at: string
-          id: string
-          status: string
-          teacher_email: string
-          teacher_name: string
-          title: string
-        }[]
-      }
       get_teacher_students: {
         Args: { teacher_id?: string }
         Returns: {
@@ -1036,13 +990,6 @@ export type Database = {
         Args: { role_to_remove: string; target_user_id: string }
         Returns: boolean
       }
-      update_evaluation_status: {
-        Args: { evaluation_id: string; new_status: string }
-        Returns: {
-          message: string
-          success: boolean
-        }[]
-      }
       user_has_permission: {
         Args: { check_permission: string }
         Returns: boolean
@@ -1065,12 +1012,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1094,11 +1041,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1119,11 +1066,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1144,11 +1091,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1161,11 +1108,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
