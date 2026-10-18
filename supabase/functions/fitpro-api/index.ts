@@ -65,6 +65,7 @@ export const PhotoSchema = z.object({ ...commonShape,
   view: viewSchema.optional(), image_base64: imageSchema.optional(),
   images: z.object({ front: imageSchema.optional(), back: imageSchema.optional(), rightProfile: imageSchema.optional(), leftProfile: imageSchema.optional() }).strict().optional(),
   angles: z.array(angleSchema).max(64).default([]), keypoints: z.array(pointSchema).length(33).optional(),
+  image_size: z.object({ width: finite.positive().max(20000), height: finite.positive().max(20000) }).optional(),
 }).superRefine((b, ctx) => {
   if (b.image_base64 && !b.view) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['view'], message: 'view obrigatório com image_base64' });
   if (!b.image_base64 && !Object.values(b.images || {}).some(Boolean)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['images'], message: 'Envie images com ao menos uma vista ou view + image_base64' });
@@ -132,12 +133,13 @@ function keypointAngles(body: Obj): AngleReading[] {
   const pts = body.keypoints;
   if (!pts) return [];
   const valid = (i: number) => pts[i] && (pts[i].visibility ?? 1) >= 0.65;
-  // Os pontos são normalizados; só razões de coordenadas no mesmo eixo/imagem.
-  // Ângulo depende da proporção do frame: preferir angles explícitos calibrados no FitPro.
+  // Corrigir proporção do frame antes de calcular graus a partir de x/y normalizados.
+  if (!body.image_size) return [];
   if (body.view === 'anterior' || body.view === 'posterior') {
     if (valid(11) && valid(12)) {
-      // Sem dimensões do frame não converter linha de ombros normalizada em graus.
-      return [];
+      const dx = Math.abs((pts[12].x - pts[11].x) * body.image_size.width);
+      const dy = (pts[12].y - pts[11].y) * body.image_size.height;
+      if (dx > 0) return [reading('shoulder_asymmetry_deg', Math.atan2(dy, dx) * 180 / Math.PI, 'client_mediapipe')];
     }
   }
   return [];
@@ -172,7 +174,8 @@ export function derivePhoto(body: Obj, raw: Obj) {
   const metrics: Obj = { deviation_scores: {} };
   for (const [k, s] of Object.entries(segments)) if (numeric(object(s).deviation_score)) metrics.deviation_scores[k] = object(s).deviation_score;
   const warnings = [];
-  if (body.keypoints) warnings.push('keypoints_require_calibrated_angles');
+  if (body.keypoints && !body.image_size) warnings.push('keypoints_require_image_size');
+  if (body.keypoints && body.image_size && !['anterior', 'posterior'].includes(body.view)) warnings.push('keypoints_require_calibrated_angles');
   if (!angles.some(a => a.key === 'shoulder_asymmetry_deg') && ['mid', 'high'].includes(segments.shoulders?.drop_level)) warnings.push('shoulder_asymmetry_qualitative');
   if (angles.some(a => a.key === 'pelvis_tilt' && a.source === 'ai_estimate')) warnings.push('pelvic_tilt_ai_signed_convention');
   return { ids: [...ids], angles, metrics, warnings, trajectory: [] as Obj[] };
@@ -333,7 +336,7 @@ export function createHandler(admin: any, config: { url: string; anonKey: string
         const body: Obj = kind === 'photo' ? parse(PhotoSchema, input) : parse(VideoSchema, input);
         await ensureOwnsStudent(admin, teacherId, body.student_id);
         if (body.assessment_id) await ensureAssessment(admin, teacherId, body.assessment_id, body.student_id);
-        const payload = kind === 'photo' ? photoPayload(body) : videoPayload(body);
+        const payload: Obj = kind === 'photo' ? photoPayload(body) : videoPayload(body);
         if (kind === 'photo') for (const k of Object.keys(payload.images)) payload.images[k] = imageUrl(payload.images[k]);
         const raw = await invokeAI(kind === 'photo' ? 'analyze-posture' : 'analyze-movement', payload, config, fetcher);
         const envelope = await makeEnvelope(kind, body, raw, admin, requestId);
@@ -406,4 +409,71 @@ if (import.meta.main) {
   if (!url || !serviceKey || !anonKey) {
     Deno.serve(req => req.method === 'OPTIONS' ? new Response('ok', { headers: corsHeaders }) : json({ ok: false, error: 'Configuração Supabase incompleta', stage: 'configuration' }, 502));
   } else Deno.serve(createHandler(createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } }), { url, anonKey }));
+}
+
+// Regressões mantidas neste arquivo para respeitar o escopo de três arquivos.
+if (!import.meta.main) {
+  const assert = (value: unknown, message: string) => { if (!value) throw new Error(message); };
+  const image = 'data:image/jpeg;base64,/9j/AA==';
+  const student = '11111111-1111-4111-8111-111111111111';
+  Deno.test('FitPro foto mapeia quatro vistas e contexto', () => {
+    for (const [view, key] of Object.entries(VIEW_MAP)) {
+      const p = photoPayload(PhotoSchema.parse({ student_id: student, view, image_base64: image, context: { altura_cm: 170, peso_kg: 72, age: 35 } }));
+      assert(p.images[key] === image && p.clientData.height === 170 && p.clientData.weight === 72, view);
+    }
+    const p = photoPayload(PhotoSchema.parse({ student_id: student, images: { front: image, back: image } }));
+    assert(p.images.front === image && p.images.back === image, 'multivista');
+  });
+  Deno.test('FitPro vídeo aceita 5 segundos e rejeita mais', () => {
+    const b = { student_id: student, exercise_type: 'agachamento', duration_sec: 5, frames_base64: [image] };
+    assert(VideoSchema.safeParse(b).success, '5s permitido');
+    assert(!VideoSchema.safeParse({ ...b, duration_sec: 5.01 }).success, '>5s bloqueado');
+  });
+  Deno.test('FitPro máximo oito frames', () => {
+    const b = { student_id: student, exercise_type: 'agachamento', duration_sec: 5 };
+    assert(VideoSchema.safeParse({ ...b, frames_base64: Array(8).fill(image) }).success, '8 permitidos');
+    assert(!VideoSchema.safeParse({ ...b, frames_base64: Array(9).fill(image) }).success, '9 bloqueados');
+  });
+  Deno.test('FitPro rejeita imagem maior que 4MB', () => {
+    assert(!PhotoSchema.safeParse({ student_id: student, view: 'anterior', image_base64: 'A'.repeat(Math.ceil((4 * 1024 * 1024 + 3) / 3) * 4) }).success, 'limite 4MB');
+  });
+  Deno.test('FitPro vídeo mapeia trajetória flags intenção e avaliação', () => {
+    const body = VideoSchema.parse({ student_id: student, assessment_id: student, exercise_type: 'agachamento', duration_sec: 5, frames_base64: [image], flags: ['DOR04'], evaluation_intent: 'valgo', angle_trajectory: [{ frame_index: 0, angles: { kneeValgusL: -5, kneeAngleL: 95 } }] });
+    const p = videoPayload(body);
+    assert(p.assessmentId === student && p.frames_base64[0] === image && p.studentContext.evaluation_intent === 'valgo', 'contrato interno');
+    assert(p.angle_trajectory[0].kneeAngleL === 95 && p.flags[0] === 'DOR04' && deriveVideo(body).ids.includes('DYN01'), 'valgo medido');
+  });
+  Deno.test('FitPro prefere ângulo do cliente sobre IA', () => {
+    const b = PhotoSchema.parse({ student_id: student, view: 'anterior', image_base64: image, angles: [{ key: 'cervical_vector_angle', value_deg: 0 }] });
+    const d = derivePhoto(b, { segments: { cervical: { vector_angle: 30, deviation_score: 90 } } });
+    assert(!d.ids.includes('PEP14') && d.angles[0].source === 'client_mediapipe', 'cliente tem prioridade');
+  });
+  Deno.test('FitPro persist padrão true e publicação exige persist', () => {
+    const b = { student_id: student, view: 'anterior', image_base64: image };
+    assert(PhotoSchema.parse(b).persist === true, 'padrão persist');
+    assert(!PhotoSchema.safeParse({ ...b, persist: false, publish: true }).success, 'publish exige persist');
+  });
+  Deno.test('FitPro sem trajetória retorna aviso e baixa confiança', async () => {
+    const b = VideoSchema.parse({ student_id: student, exercise_type: 'agachamento', duration_sec: 5, frames_base64: [image] });
+    const e = await makeEnvelope('video', b, { analysis: { detected_faults: [], ai_summary: 'Descrição' } }, {}, 'request');
+    assert(e.warnings.includes('no_angle_trajectory') && e.confidence <= 0.35 && e.angles_source === 'unavailable', 'trajetória ausente explícita');
+  });
+  Deno.test('FitPro rejeita HTTP interno não-ok sem parsear JSON', async () => {
+    let failed = false;
+    try { await invokeAI('analyze-posture', {}, { url: 'https://example.invalid', anonKey: 'anon' }, (async () => new Response('não JSON', { status: 500 })) as typeof fetch); }
+    catch (e) { failed = e instanceof ApiError && e.status === 502 && e.stage === 'analyze-posture'; }
+    assert(failed, 'HTTP interno =>502');
+  });
+  Deno.test('FitPro bloqueia fallback falso de sucesso', async () => {
+    let failed = false;
+    try { await invokeAI('analyze-posture', {}, { url: 'https://example.invalid', anonKey: 'anon' }, (async () => new Response(JSON.stringify({ status: 'success', macro_diagnosis: 'Análise parcial - verifique manualmente' }))) as typeof fetch); }
+    catch (e) { failed = e instanceof ApiError && e.status === 502; }
+    assert(failed, 'fallback =>502');
+  });
+  Deno.test('FitPro erro de vínculo não é aluno não vinculado', async () => {
+    const query: any = { select: () => query, eq: () => query, maybeSingle: async () => ({ error: { message: 'DB indisponível' }, data: null }) };
+    let status = 0;
+    try { await ensureOwnsStudent({ from: () => query }, student, student); } catch (e) { if (e instanceof ApiError) status = e.status; }
+    assert(status === 502, 'DB erro =>502 não 403');
+  });
 }
