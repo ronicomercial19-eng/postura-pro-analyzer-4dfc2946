@@ -535,6 +535,101 @@ export type Database = {
           },
         ]
       }
+      ppa_live_corrections: {
+        Row: {
+          corrected: boolean
+          created_at: string
+          id: string
+          joint: string
+          macro_key: string
+          note: string | null
+          source: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          corrected?: boolean
+          created_at?: string
+          id?: string
+          joint: string
+          macro_key: string
+          note?: string | null
+          source?: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          corrected?: boolean
+          created_at?: string
+          id?: string
+          joint?: string
+          macro_key?: string
+          note?: string | null
+          source?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppa_live_corrections_macro_key_fkey"
+            columns: ["macro_key"]
+            isOneToOne: false
+            referencedRelation: "ppa_live_rules"
+            referencedColumns: ["macro_key"]
+          },
+        ]
+      }
+      ppa_live_rules: {
+        Row: {
+          corrective: Json
+          created_at: string
+          cue: string
+          flags: string[]
+          id: string
+          inhibited: string[]
+          joint: string
+          macro_key: string
+          myofascial_lines: string[]
+          name: string
+          overloaded: string[]
+          red_flag_note: string | null
+          risk: string
+          sort_order: number
+        }
+        Insert: {
+          corrective?: Json
+          created_at?: string
+          cue: string
+          flags?: string[]
+          id?: string
+          inhibited?: string[]
+          joint: string
+          macro_key: string
+          myofascial_lines?: string[]
+          name: string
+          overloaded?: string[]
+          red_flag_note?: string | null
+          risk: string
+          sort_order?: number
+        }
+        Update: {
+          corrective?: Json
+          created_at?: string
+          cue?: string
+          flags?: string[]
+          id?: string
+          inhibited?: string[]
+          joint?: string
+          macro_key?: string
+          myofascial_lines?: string[]
+          name?: string
+          overloaded?: string[]
+          red_flag_note?: string | null
+          risk?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       ppa_media_assets: {
         Row: {
           assessment_id: string

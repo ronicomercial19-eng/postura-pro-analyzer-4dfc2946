@@ -20,6 +20,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { legacyTable } from '@/integrations/supabase/legacyTables';
 import { toast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -137,8 +138,7 @@ const RoleDashboard = ({ userRole }: RoleDashboardProps) => {
 
     // Try to load evaluations
     try {
-      const { data, error } = await supabase
-        .from('evaluations')
+      const { data, error } = await legacyTable('evaluations')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
@@ -175,8 +175,7 @@ const RoleDashboard = ({ userRole }: RoleDashboardProps) => {
     let evaluationsData: any[] = [];
 
     try {
-      const { data, error } = await supabase
-        .from('evaluations')
+      const { data, error } = await legacyTable('evaluations')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -219,8 +218,7 @@ const RoleDashboard = ({ userRole }: RoleDashboardProps) => {
     if (!evalTitle) return;
 
     try {
-      const { error } = await supabase
-        .from('evaluations')
+      const { error } = await legacyTable('evaluations')
         .insert({
           title: evalTitle,
           student_id: selectedStudentId || null,

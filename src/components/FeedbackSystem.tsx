@@ -17,6 +17,7 @@ import {
   Bug
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { legacyTable } from '@/integrations/supabase/legacyTables';
 import { toast } from '@/hooks/use-toast';
 
 interface Feedback {
@@ -49,8 +50,7 @@ const FeedbackSystem = ({ isTeacher = false }: FeedbackSystemProps) => {
   const loadFeedbacks = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('user_feedback')
+      let query = legacyTable('user_feedback')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -75,8 +75,7 @@ const FeedbackSystem = ({ isTeacher = false }: FeedbackSystemProps) => {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('user_feedback')
+      const { error } = await legacyTable('user_feedback')
         .insert({
           type: feedbackType,
           message: `${title ? title + '\n\n' : ''}${message}`,

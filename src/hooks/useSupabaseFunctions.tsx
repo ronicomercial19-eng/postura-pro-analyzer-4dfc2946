@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { legacyTable } from '@/integrations/supabase/legacyTables';
 import { toast } from '@/hooks/use-toast';
 
 export const useSupabaseFunctions = () => {
@@ -63,8 +64,7 @@ export const useSupabaseFunctions = () => {
   const getStudentEvaluations = async (studentId?: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('evaluations')
+      const { data, error } = await legacyTable('evaluations')
         .select('*')
         .order('created_at', { ascending: false });
       
@@ -96,8 +96,7 @@ export const useSupabaseFunctions = () => {
   const createEvaluation = async (title: string, studentId?: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('evaluations')
+      const { data, error } = await legacyTable('evaluations')
         .insert({
           title,
           student_id: studentId || null,
@@ -130,8 +129,7 @@ export const useSupabaseFunctions = () => {
   const updateEvaluationStatus = async (evaluationId: string, status: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase
-        .from('evaluations')
+      const { error } = await legacyTable('evaluations')
         .update({ status })
         .eq('id', evaluationId);
       

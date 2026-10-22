@@ -9,6 +9,7 @@ import PosturalMeasurements from './assessment/PosturalMeasurements';
 import DiagnosticAI from './assessment/DiagnosticAI';
 import PhotoUploadSystem from './PhotoUploadSystem';
 import { supabase } from '@/integrations/supabase/client';
+import { legacyTable } from '@/integrations/supabase/legacyTables';
 import { Button } from '@/components/ui/button';
 import { Save, Upload } from 'lucide-react';
 
@@ -178,8 +179,7 @@ const PosturalAssessment = () => {
         status: 'draft'
       };
 
-      const { data: evaluation, error } = await supabase
-        .from('evaluations')
+      const { data: evaluation, error } = await legacyTable('evaluations')
         .insert([evaluationData])
         .select()
         .single();

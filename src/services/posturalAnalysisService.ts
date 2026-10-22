@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { legacyTable } from '@/integrations/supabase/legacyTables';
 
 export interface PosturalPattern {
   code: string;
@@ -23,8 +23,7 @@ export interface AnalysisResult {
  */
 export async function analyzePosturalData(evaluationId: string): Promise<AnalysisResult> {
   // 1. Buscar dados reais da avaliação
-  const { data: evaluation, error } = await supabase
-    .from('evaluations')
+  const { data: evaluation, error } = await legacyTable('evaluations')
     .select('*')
     .eq('id', evaluationId)
     .single();
@@ -178,8 +177,7 @@ export async function saveAnalysis(
   analysis: AnalysisResult,
   userId: string
 ): Promise<string> {
-  const { data, error } = await supabase
-    .from('postural_analyses')
+  const { data, error } = await legacyTable('postural_analyses')
     .insert([{
       evaluation_id: evaluationId,
       created_by: userId,
@@ -204,8 +202,7 @@ export async function saveAnalysis(
  * Busca análise salva
  */
 export async function getAnalysis(evaluationId: string): Promise<AnalysisResult | null> {
-  const { data, error } = await supabase
-    .from('postural_analyses')
+  const { data, error } = await legacyTable('postural_analyses')
     .select('*')
     .eq('evaluation_id', evaluationId)
     .order('created_at', { ascending: false })
