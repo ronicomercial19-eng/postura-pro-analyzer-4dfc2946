@@ -16,6 +16,7 @@ import {
   Activity
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { legacyTable } from '@/integrations/supabase/legacyTables';
 
 interface SystemStatus {
   component: string;
@@ -38,12 +39,10 @@ const SystemSummary = () => {
   const loadSystemStatus = async () => {
     try {
       // Get system statistics sem filtro de usuário
-      const { data: evaluations } = await supabase
-        .from('evaluations')
+      const { data: evaluations } = await legacyTable('evaluations')
         .select('*');
 
-      const { data: photos } = await supabase
-        .from('photos')
+      const { data: photos } = await legacyTable('photos')
         .select('*');
 
       const { data: students } = await supabase

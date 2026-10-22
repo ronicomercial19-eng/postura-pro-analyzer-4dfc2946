@@ -12,6 +12,7 @@ import {
   Camera
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { legacyTable } from '@/integrations/supabase/legacyTables';
 import { toast } from '@/hooks/use-toast';
 
 interface PhotoUploadSystemProps {
@@ -102,8 +103,7 @@ const PhotoUploadSystem = ({
 
       // Save photo record to database if evaluation exists
       if (evaluationId) {
-        const { data: photoData, error: dbError } = await supabase
-          .from('photos')
+        const { data: photoData, error: dbError } = await legacyTable('photos')
           .insert([{
             evaluation_id: evaluationId,
             image_url: publicUrl,
