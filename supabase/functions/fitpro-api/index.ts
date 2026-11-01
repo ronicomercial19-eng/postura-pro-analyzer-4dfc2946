@@ -1,3 +1,4 @@
+import { fitProPostureImages } from "./contract.ts";
 // FitPro <-> Postura Pro Analyser gateway
 // Autenticação: Bearer fpk_... (tokens em public.fitpro_integration_tokens)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -55,7 +56,9 @@ async function invokeAI(fn: string, body: unknown) {
     headers: { 'Authorization': `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  return res.json();
+  const result = await res.json();
+  if (!res.ok || result?.error || result?.status === 'error') throw new Error('Postura analysis provider unavailable');
+  return result;
 }
 
 serve(async (req) => {
@@ -70,6 +73,7 @@ serve(async (req) => {
   const path = url.pathname.replace(/^.*\/fitpro-api/, '') || '/';
 
   try {
+    if (req.method === 'GET' && path === '/health') return json({ ok: true, service: 'postura-pro', scope: 'integration' });
     // ===== TEACHER =====
     if (req.method === 'GET' && path === '/teacher/dashboard') {
       const [{ data: students }, { data: assessments }] = await Promise.all([
@@ -139,15 +143,32 @@ serve(async (req) => {
     }
 
     // ===== ANALYSIS =====
+    // Stateless FitPro analysis: the integration token identifies the calling
+    // teacher. FitPro enforces the coach/athlete relationship before signing
+    // images. No provider student record is read or written by this route.
+    if (req.method === 'POST' && path === '/analyze') {
+      const body = await req.json();
+      let images: Record<string, string>;
+      try {
+        images = fitProPostureImages(body, Deno.env.get('FITPRO_STORAGE_HOST') || 'mfrydtrzjxscbkaiwfnw.supabase.co');
+      } catch {
+        return json({ error: 'Four signed FitPro assessment images required' }, 400);
+      }
+      const result = await invokeAI('analyze-posture', { images });
+      if (result?.status !== 'success' || !result?.segments || !result?.recovery_protocol)
+        return json({ error: 'Invalid posture analysis' }, 502);
+      return json(result);
+    }
+
     if (req.method === 'POST' && path === '/analysis/photo') {
       const body = await req.json();
       if (!body.student_id || !body.image_base64 || !body.view)
         return json({ error: 'student_id, image_base64, view required' }, 400);
       if (!(await ensureOwnsStudent(teacher_id, body.student_id))) return json({ error: 'Forbidden' }, 403);
+      if (!['front', 'back', 'left', 'right', 'leftProfile', 'rightProfile'].includes(body.view)) return json({ error: 'Invalid posture view' }, 400);
       const result = await invokeAI('analyze-posture', {
-        view: body.view,
-        image_base64: body.image_base64,
-        context: body.context || {},
+        images: { [({ left: 'leftProfile', right: 'rightProfile' } as Record<string, string>)[body.view] || body.view]: body.image_base64 },
+        clientData: body.context || {},
       });
       return json({ ok: true, source: 'analyze-posture', ...result });
     }
