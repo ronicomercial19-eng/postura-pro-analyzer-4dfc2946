@@ -1,5 +1,6 @@
 // FitPro <-> Postura Pro Analyser gateway
 // Autenticação: Bearer fpk_... (tokens em public.fitpro_integration_tokens)
+// Contrato FitPro postura-pro-scan: POST /analyze { front, back, left, right } signed URLs
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -58,6 +59,10 @@ async function invokeAI(fn: string, body: unknown) {
   return res.json();
 }
 
+function isSignedImageUrl(value: unknown): value is string {
+  return typeof value === 'string' && /^https?:\/\//.test(value) && !value.includes('..');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -66,11 +71,31 @@ serve(async (req) => {
   const { teacher_id } = auth;
 
   const url = new URL(req.url);
-  // path após "/fitpro-api"
   const path = url.pathname.replace(/^.*\/fitpro-api/, '') || '/';
 
   try {
-    // ===== TEACHER =====
+    // ===== FitPro 4-photo contract =====
+    // postura-pro-scan posts { front, back, left, right } signed URLs to /analyze
+    if (req.method === 'POST' && path === '/analyze') {
+      const body = await req.json();
+      const sides = [body?.front, body?.back, body?.left, body?.right];
+      if (!sides.every(isSignedImageUrl))
+        return json({ error: 'front, back, left, right signed image URLs required' }, 400);
+
+      const result = await invokeAI('analyze-posture', {
+        images: {
+          front: body.front,
+          back: body.back,
+          leftProfile: body.left,
+          rightProfile: body.right,
+        },
+        clientData: body.clientData || {},
+      });
+
+      // Return the analyze-posture shape as-is so FitPro confirmedPostureResult accepts it.
+      return json(result);
+    }
+
     if (req.method === 'GET' && path === '/teacher/dashboard') {
       const [{ data: students }, { data: assessments }] = await Promise.all([
         admin.rpc('get_teacher_students', { teacher_id }),
@@ -103,7 +128,6 @@ serve(async (req) => {
       return json({ assessments: data || [] });
     }
 
-    // ===== STUDENT (proxy autorizado pelo vínculo professor->aluno) =====
     const student_id = url.searchParams.get('student_id') || '';
     if (path.startsWith('/student/') && req.method === 'GET') {
       if (!student_id) return json({ error: 'student_id required' }, 400);
@@ -138,7 +162,6 @@ serve(async (req) => {
       return json({ prescriptions: plans || [] });
     }
 
-    // ===== ANALYSIS =====
     if (req.method === 'POST' && path === '/analysis/photo') {
       const body = await req.json();
       if (!body.student_id || !body.image_base64 || !body.view)
