@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Bell, Menu, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import AiQuotaBadge from '@/components/AiQuotaBadge';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -24,6 +25,7 @@ const Header = () => {
           </Button>
           {user && (
             <>
+              <AiQuotaBadge />
               <span className="hidden lg:inline text-xs text-gray-500 max-w-[180px] truncate">
                 {user.email}
               </span>

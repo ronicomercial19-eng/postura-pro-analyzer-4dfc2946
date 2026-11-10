@@ -2,6 +2,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3.23.8';
+import { enforceAiQuota } from '../_shared/ai-quota.ts';
 import { evaluationFlags, getFlagDef, diagnoseFromFlags, classifyArchetype, fetchProtocol } from '../_shared/myofascial-engine.ts';
 
 // Convenções explícitas: ângulos em graus; scores/valgo/desnível em %.
@@ -106,7 +107,7 @@ export async function invokeAI(fn: string, body: unknown, config: { url: string;
   let response: Response;
   try {
     response = await fetcher(`${config.url}/functions/v1/${fn}`, {
-      method: 'POST', headers: { apikey: config.anonKey, Authorization: `Bearer ${config.anonKey}`, 'Content-Type': 'application/json' },
+      method: 'POST', headers: { apikey: config.anonKey, Authorization: `Bearer ${config.anonKey}`, 'Content-Type': 'application/json', 'x-ppa-internal': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '' },
       body: JSON.stringify(body), signal: AbortSignal.timeout(90000),
     });
   } catch { throw new ApiError(502, 'Função interna indisponível ou tempo de análise excedido', fn); }
@@ -338,6 +339,8 @@ export function createHandler(admin: any, config: { url: string; anonKey: string
         if (body.assessment_id) await ensureAssessment(admin, teacherId, body.assessment_id, body.student_id);
         const payload: Obj = kind === 'photo' ? photoPayload(body) : videoPayload(body);
         if (kind === 'photo') for (const k of Object.keys(payload.images)) payload.images[k] = imageUrl(payload.images[k]);
+        const quotaBlock = await enforceAiQuota(req, `fitpro:${kind}`, {}, teacherId);
+        if (quotaBlock) throw new ApiError(quotaBlock.status, (await quotaBlock.json()).error, 'quota');
         const raw = await invokeAI(kind === 'photo' ? 'analyze-posture' : 'analyze-movement', payload, config, fetcher);
         const envelope = await makeEnvelope(kind, body, raw, admin, requestId);
         if (usage.error) envelope.warnings.push('token_usage_update_failed');

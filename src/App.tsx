@@ -9,6 +9,8 @@ import { ActiveAssessmentProvider } from "./contexts/ActiveAssessmentContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import AuthPage from "./components/auth/AuthPage";
 import { Loader2 } from "lucide-react";
+import ConsentGate from "./components/legal/ConsentGate";
+import LegalPage from "./pages/LegalPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +47,9 @@ const App = () => {
                 <Sonner />
                 <Routes>
                   <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/" element={<AuthGate><Index /></AuthGate>} />
+                  <Route path="/termos" element={<LegalPage kind="termos" />} />
+                  <Route path="/privacidade" element={<LegalPage kind="privacidade" />} />
+                  <Route path="/" element={<AuthGate><ConsentGate><Index /></ConsentGate></AuthGate>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </TooltipProvider>
