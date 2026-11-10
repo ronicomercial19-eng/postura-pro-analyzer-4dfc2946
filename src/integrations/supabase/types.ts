@@ -1120,6 +1120,7 @@ export type Database = {
         Args: { _function_name: string; _user_id: string }
         Returns: Json
       }
+      get_my_ai_quota: { Args: never; Returns: Json }
       get_teacher_students: {
         Args: { teacher_id?: string }
         Returns: {
