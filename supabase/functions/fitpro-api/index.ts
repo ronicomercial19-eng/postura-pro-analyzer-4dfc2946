@@ -2,6 +2,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3.23.8';
+import { enforceAiQuota } from '../_shared/ai-quota.ts';
 import { evaluationFlags, getFlagDef, diagnoseFromFlags, classifyArchetype, fetchProtocol } from '../_shared/myofascial-engine.ts';
 
 // Convenções explícitas: ângulos em graus; scores/valgo/desnível em %.

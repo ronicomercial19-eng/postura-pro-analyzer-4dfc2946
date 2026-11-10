@@ -12,6 +12,8 @@ export async function enforceAiQuota(
 ): Promise<Response | null> {
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  // Chamada interna (fitpro-api) já consumiu a cota do professor.
+  if (!userIdOverride && serviceKey && req.headers.get("x-ppa-internal") === serviceKey) return null;
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
   let userId = userIdOverride;
