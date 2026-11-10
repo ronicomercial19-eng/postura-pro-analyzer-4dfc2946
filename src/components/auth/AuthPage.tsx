@@ -24,6 +24,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [showDebug, setShowDebug] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   
   const { signIn, signUp, user, loading, initialized } = useAuth();
   const navigate = useNavigate();
@@ -84,6 +85,11 @@ const AuthPage = () => {
       return;
     }
     
+    if (!acceptedTerms) {
+      setError('É necessário aceitar os Termos de Uso, a Política de Privacidade e o processamento de imagens por IA.');
+      return;
+    }
+
     const result = await signUp(email, password, fullName, role);
     
     if (!result.success) {
@@ -263,6 +269,21 @@ const AuthPage = () => {
                     </Select>
                   </div>
                   
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      disabled={loading}
+                    />
+                    <span>
+                      Li e aceito os <a href="/termos" target="_blank" className="underline text-primary">Termos de Uso</a> e a{' '}
+                      <a href="/privacidade" target="_blank" className="underline text-primary">Política de Privacidade</a>, e autorizo o
+                      processamento de imagens corporais por IA (dados sensíveis — LGPD art. 11).
+                    </span>
+                  </label>
+
                   <div className="space-y-2">
                     <Label htmlFor="register-email">Email</Label>
                     <Input
