@@ -47,6 +47,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_quota_limits: {
+        Row: {
+          monthly_limit: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          monthly_limit?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          monthly_limit?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_usage_events: {
+        Row: {
+          created_at: string
+          function_name: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          function_name: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          function_name?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assessment_drafts: {
         Row: {
           created_at: string | null
@@ -1022,6 +1061,30 @@ export type Database = {
           },
         ]
       }
+      user_consents: {
+        Row: {
+          accepted_at: string
+          consent_type: string
+          id: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          accepted_at?: string
+          consent_type: string
+          id?: string
+          user_id: string
+          version: string
+        }
+        Update: {
+          accepted_at?: string
+          consent_type?: string
+          id?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1053,6 +1116,10 @@ export type Database = {
         Returns: undefined
       }
       can_perform_action: { Args: { required_role: string }; Returns: boolean }
+      consume_ai_quota: {
+        Args: { _function_name: string; _user_id: string }
+        Returns: Json
+      }
       get_teacher_students: {
         Args: { teacher_id?: string }
         Returns: {
