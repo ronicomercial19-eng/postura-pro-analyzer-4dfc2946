@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Loader2 } from 'lucide-react';
@@ -43,7 +44,7 @@ export const StudentReportView = () => {
       </CardHeader>
       <CardContent>
         {report.report_html ? (
-          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: report.report_html }} />
+          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(report.report_html) }} />
         ) : (
           <p className="text-muted-foreground">Relatório sem conteúdo HTML.</p>
         )}
