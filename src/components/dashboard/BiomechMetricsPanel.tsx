@@ -1,10 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import PhotoMetricsOverlay from '@/components/dashboard/PhotoMetricsOverlay';
 
 interface Metric { key: string; value: number; unit: string | null; severity: number }
 
-const LABELS: Record<string, { label: string; ideal: string }> = {
+export const BIOMECH_LABELS: Record<string, { label: string; ideal: string }> = {
   head_tilt: { label: 'Inclinação da cabeça', ideal: '0°' },
   shoulders: { label: 'Ombros (desnível)', ideal: '0°' },
   hips: { label: 'Quadril (desnível)', ideal: '0°' },
@@ -15,13 +14,14 @@ const LABELS: Record<string, { label: string; ideal: string }> = {
   trunk_lean: { label: 'Inclinação do tronco', ideal: '0°' },
   knee_side: { label: 'Joelho (perfil)', ideal: '180°' },
 };
-const VIEW_LABEL: Record<string, string> = {
+export const VIEW_LABEL: Record<string, string> = {
   anterior: 'Vista anterior', posterior: 'Vista posterior', lateral_d: 'Lateral direita', lateral_e: 'Lateral esquerda',
 };
-const CLS: Record<string, { text: string; css: string }> = {
-  normal: { text: 'Normal', css: 'bg-green-100 text-green-800 border-green-300' },
-  leve: { text: 'Leve', css: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  significativo: { text: 'Significativo', css: 'bg-red-100 text-red-800 border-red-300' },
+// Classificação da medida (gravada em `unit`) -> rótulo e cor de status do sistema NINE.
+export const BIOMECH_STATUS: Record<string, { text: string; css: string }> = {
+  normal: { text: 'Bom', css: 'text-status-good' },
+  leve: { text: 'Regular', css: 'text-muted-foreground' },
+  significativo: { text: 'Atenção', css: 'text-status-alert' },
 };
 
 function sideNote(id: string, v: number): string {
@@ -37,7 +37,7 @@ const BiomechMetricsPanel = ({ metrics }: { metrics: Metric[] }) => {
   const groups: Record<string, { id: string; value: number; cls: string }[]> = {};
   metrics.forEach(m => {
     const mt = m.key.match(/^angle_(.+)_(anterior|posterior|lateral_d|lateral_e)$/);
-    if (!mt || !LABELS[mt[1]]) return;
+    if (!mt || !BIOMECH_LABELS[mt[1]]) return;
     (groups[mt[2]] ||= []).push({ id: mt[1], value: m.value, cls: m.unit || 'normal' });
   });
   const views = Object.keys(groups);
@@ -46,7 +46,7 @@ const BiomechMetricsPanel = ({ metrics }: { metrics: Metric[] }) => {
   return (
     <Card className="mt-4">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Métricas Biomecânicas</CardTitle>
+        <CardTitle className="nine-overline text-sm text-foreground">Métricas principais</CardTitle>
         <p className="text-xs text-muted-foreground">
           Ângulos 2D estimados a partir dos pontos do corpo. Referência de triagem; não é diagnóstico.
         </p>
@@ -54,24 +54,22 @@ const BiomechMetricsPanel = ({ metrics }: { metrics: Metric[] }) => {
       <CardContent className="space-y-6">
         {views.map(view => (
           <div key={view} className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground">{VIEW_LABEL[view]}</p>
+            <p className="nine-overline">{VIEW_LABEL[view]}</p>
             {metrics.some(m => m.key.startsWith('keypoint_') && m.key.endsWith(`_${view}`)) && (
               <PhotoMetricsOverlay metrics={metrics} view={view} />
             )}
-            <div className="divide-y border rounded-lg">
+            <div className="divide-y rounded-lg border">
               {groups[view].map(a => {
-                const c = CLS[a.cls] || CLS.normal;
+                const c = BIOMECH_STATUS[a.cls] || BIOMECH_STATUS.normal;
                 const note = sideNote(a.id, a.value);
                 return (
-                  <div key={a.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                    <div>
-                      <span className="font-medium">{LABELS[a.id].label}</span>
-                      <span className="text-xs text-muted-foreground ml-2">ideal {LABELS[a.id].ideal}{note ? ` · ${note}` : ''}</span>
+                  <div key={a.id} className="grid min-h-[52px] grid-cols-[1fr_auto_auto] items-center gap-4 px-4 py-2">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium uppercase tracking-wider">{BIOMECH_LABELS[a.id].label}</p>
+                      <p className="text-xs text-muted-foreground">ideal {BIOMECH_LABELS[a.id].ideal}{note ? ` · ${note}` : ''}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-semibold">{a.value.toFixed(1)}°</span>
-                      <Badge className={c.css}>{c.text}</Badge>
-                    </div>
+                    <span className="num text-lg font-semibold">{a.value.toFixed(1)}°</span>
+                    <span className={`w-16 text-right text-xs font-semibold uppercase tracking-wider ${c.css}`}>{c.text}</span>
                   </div>
                 );
               })}

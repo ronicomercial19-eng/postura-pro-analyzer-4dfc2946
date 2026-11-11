@@ -6,6 +6,7 @@ import ClientManagement from '@/components/ClientManagement';
 import AssessmentWizard from '@/components/pages/AssessmentWizard';
 import MediaCollector from '@/components/pages/MediaCollector';
 import ResultsHUD from '@/components/pages/ResultsHUD';
+import PosturaOverview from '@/components/pages/PosturaOverview';
 import PlanBuilder from '@/components/pages/PlanBuilder';
 import SessionTracker from '@/components/pages/SessionTracker';
 import ProtocolLibrary from '@/components/pages/ProtocolLibrary';
@@ -60,7 +61,12 @@ const Index = () => {
       case 'media-collector':
         return <MediaCollector onNavigate={setCurrentView} />;
       case 'results-hud':
-        return <ResultsHUD onNavigate={setCurrentView} />;
+        return (
+          <div className="space-y-6">
+            <PosturaOverview onNavigate={setCurrentView} />
+            <ResultsHUD onNavigate={setCurrentView} />
+          </div>
+        );
       case 'plan-builder':
         return <PlanBuilder onNavigate={setCurrentView} />;
       case 'session-tracker':
