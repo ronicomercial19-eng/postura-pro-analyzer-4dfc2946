@@ -2,93 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
+/*
+  NINE Design System v1 — régua de luminosidade
+  L1 #0A0B0C  L2 #0B1B3A  L3 #16355F  L4 #8FA3BF  L5 #E6EBF2
+  Laranja Energia #FF5A1F | Azul Signal #2F7BFF
+  Valores em HSL (canais), no formato do shadcn.
+
+  Derivados (misturas da própria régua, não são cores novas):
+  - card/popover do personal = L3 a 35% sobre L1
+  - secondary/muted/accent do personal = L3 a 55% sobre L1
+  - borda do personal = L3 a 60% sobre L1
+  - secondary/muted do aluno = L2 a 50% sobre L3; borda do aluno = L3 a 25% sobre L4
+  Cores de apoio definidas aqui (o documento não traz hex): verde de status e vermelho de erro.
+*/
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+  /* Persona personal: faixa L1 a L3, ação primária laranja. É o tema padrão. */
+  :root,
+  .tema-personal {
+    --background: 210 9% 4%;
+    --foreground: 215 32% 93%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 213 49% 11%;
+    --card-foreground: 215 32% 93%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 213 49% 11%;
+    --popover-foreground: 215 32% 93%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 16 100% 56%;
+    --primary-foreground: 210 9% 4%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 215 55% 15%;
+    --secondary-foreground: 215 32% 93%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 215 55% 15%;
+    --muted-foreground: 215 27% 66%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 215 55% 15%;
+    --accent-foreground: 215 32% 93%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 358 75% 59%;
+    --destructive-foreground: 210 9% 4%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 215 56% 17%;
+    --input: 215 56% 17%;
+    --ring: 16 100% 56%;
 
-    --radius: 0.5rem;
+    --status-good: 147 45% 46%;
+    --status-regular: 215 27% 66%;
+    --status-alert: 16 100% 56%;
+    --status-critical: 358 75% 59%;
 
-    --sidebar-background: 0 0% 98%;
+    --radius: 0.75rem;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 210 9% 4%;
+    --sidebar-foreground: 215 32% 93%;
+    --sidebar-primary: 16 100% 56%;
+    --sidebar-primary-foreground: 210 9% 4%;
+    --sidebar-accent: 215 55% 15%;
+    --sidebar-accent-foreground: 215 32% 93%;
+    --sidebar-border: 215 56% 17%;
+    --sidebar-ring: 16 100% 56%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+  /* Persona aluno: faixa L2 a L3, ação primária Azul Signal. */
+  .tema-aluno {
+    --background: 220 68% 14%;
+    --foreground: 215 32% 93%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 215 62% 23%;
+    --card-foreground: 215 32% 93%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 215 62% 23%;
+    --popover-foreground: 215 32% 93%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 218 100% 59%;
+    --primary-foreground: 210 9% 4%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 216 66% 18%;
+    --secondary-foreground: 215 32% 93%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 216 66% 18%;
+    --muted-foreground: 215 27% 66%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 216 66% 18%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --border: 215 39% 33%;
+    --input: 215 39% 33%;
+    --ring: 218 100% 59%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 220 68% 14%;
+    --sidebar-primary: 218 100% 59%;
+    --sidebar-accent: 216 66% 18%;
+    --sidebar-border: 215 39% 33%;
+    --sidebar-ring: 218 100% 59%;
   }
 }
 
@@ -98,6 +105,55 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.15;
   }
 }
+
+@layer components {
+  /* Rótulo curto em caixa alta (legendas, cabeçalhos de bloco, navegação). */
+  .nine-overline {
+    @apply text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  /* Número é o herói: fonte mono, algarismos de largura fixa. */
+  .num {
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/*
+  CAMADA DE TRANSIÇÃO. Telas ainda não migradas usam cores fixas do Tailwind
+  (bg-white, bg-green-100, text-blue-600...). Aqui elas são mapeadas para os tokens,
+  para não aparecerem claras ou fora da paleta no tema escuro:
+    verde = ok | laranja/amarelo = atenção | vermelho = crítico | azul/roxo/índigo = neutro.
+  Quando uma tela for migrada para tokens, o mapeamento correspondente deixa de ser usado.
+  Remover este bloco depois que todas as telas migrarem.
+*/
+.bg-white { background-color: hsl(var(--card)); }
+.bg-gray-50, .bg-gray-100, .bg-slate-50, .bg-slate-100 { background-color: hsl(var(--muted)); }
+.border-gray-200, .border-gray-300, .border-slate-200 { border-color: hsl(var(--border)); }
+.text-gray-400, .text-gray-500, .text-gray-600 { color: hsl(var(--muted-foreground)); }
+.text-gray-700, .text-gray-800, .text-gray-900 { color: hsl(var(--foreground)); }
+
+.bg-green-50, .bg-green-100 { background-color: hsl(var(--status-good) / 0.14); }
+.text-green-600, .text-green-700, .text-green-800 { color: hsl(var(--status-good)); }
+.border-green-200, .border-green-300 { border-color: hsl(var(--status-good) / 0.4); }
+
+.bg-yellow-50, .bg-yellow-100, .bg-amber-50, .bg-amber-100, .bg-orange-50, .bg-orange-100 { background-color: hsl(var(--status-alert) / 0.14); }
+.text-yellow-600, .text-yellow-700, .text-yellow-800, .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900, .text-orange-600, .text-orange-700, .text-orange-800 { color: hsl(var(--status-alert)); }
+.border-yellow-200, .border-yellow-300, .border-amber-200, .border-amber-300, .border-amber-400, .border-orange-200, .border-orange-300 { border-color: hsl(var(--status-alert) / 0.4); }
+
+.bg-red-50, .bg-red-100 { background-color: hsl(var(--status-critical) / 0.14); }
+.text-red-600, .text-red-700, .text-red-800, .text-red-900 { color: hsl(var(--status-critical)); }
+.border-red-200, .border-red-300, .border-red-400 { border-color: hsl(var(--status-critical) / 0.4); }
+
+.bg-blue-50, .bg-blue-100, .bg-purple-50, .bg-purple-100, .bg-indigo-50, .bg-indigo-100 { background-color: hsl(var(--muted)); }
+.text-blue-600, .text-blue-700, .text-blue-800, .text-purple-600, .text-purple-700, .text-purple-800, .text-indigo-600, .text-indigo-700, .text-indigo-800, .text-indigo-900 { color: hsl(var(--muted-foreground)); }
+.border-blue-200, .border-purple-200, .border-indigo-200 { border-color: hsl(var(--border)); }

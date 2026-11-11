@@ -18,7 +18,18 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['"IBM Plex Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				heading: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace']
+			},
 			colors: {
+				status: {
+					good: 'hsl(var(--status-good) / <alpha-value>)',
+					regular: 'hsl(var(--status-regular) / <alpha-value>)',
+					alert: 'hsl(var(--status-alert) / <alpha-value>)',
+					critical: 'hsl(var(--status-critical) / <alpha-value>)'
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -63,10 +74,20 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			// NINE: 12 px em cartões (lg), 8 px em campos e botões (md), chips em rounded-full.
 			borderRadius: {
-				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				lg: '12px',
+				md: '8px',
+				sm: '4px'
+			},
+			// NINE: sem sombra. A profundidade vem da superfície.
+			boxShadow: {
+				sm: 'none',
+				DEFAULT: 'none',
+				md: 'none',
+				lg: 'none',
+				xl: 'none',
+				'2xl': 'none'
 			},
 			keyframes: {
 				'accordion-down': {
