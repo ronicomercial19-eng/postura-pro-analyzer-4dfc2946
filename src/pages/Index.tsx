@@ -24,9 +24,11 @@ import HighPerformanceEngine from '@/components/pages/HighPerformanceEngine';
 import TestsAndConsent from '@/components/pages/TestsAndConsent';
 import { useAuth } from '@/hooks/useAuth';
 import { useActiveAssessment } from '@/contexts/ActiveAssessmentContext';
+import { useNineTheme } from '@/hooks/useNineTheme';
 
 const Index = () => {
   const { userRole } = useAuth();
+  useNineTheme();
   const { active } = useActiveAssessment();
   const activeStudentId = active.studentId || undefined;
   const activeAssessmentId = active.assessmentId || undefined;
