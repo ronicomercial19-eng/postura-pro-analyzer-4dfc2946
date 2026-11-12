@@ -30,6 +30,7 @@ export default {
 					alert: 'hsl(var(--status-alert) / <alpha-value>)',
 					critical: 'hsl(var(--status-critical) / <alpha-value>)'
 				},
+				brand: 'hsl(var(--brand) / <alpha-value>)',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',

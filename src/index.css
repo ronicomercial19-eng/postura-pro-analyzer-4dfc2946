@@ -53,6 +53,9 @@
     --status-alert: 16 100% 56%;
     --status-critical: 358 75% 59%;
 
+    /* Selo NINE: laranja fixo em todas as personas (não segue --primary). */
+    --brand: 16 100% 56%;
+
     --radius: 0.75rem;
 
     --sidebar-background: 210 9% 4%;

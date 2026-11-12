@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import NineMark from '@/components/nine/NineMark';
+import NineSeal from '@/components/nine/NineSeal';
 
 interface NavigationProps {
   activeSection: string;
@@ -69,14 +69,8 @@ const Navigation = ({ activeSection, onSectionChange }: NavigationProps) => {
   return (
     <nav className="flex min-h-screen w-64 flex-col border-r border-border bg-background p-4" aria-label="Navegação principal">
       <div className="mb-6 px-2 pt-2">
-        <div className="flex items-center gap-3">
-          <NineMark size={36} />
-          <div className="leading-none">
-            <p className="font-heading text-lg font-bold tracking-[0.28em]">NINE</p>
-            <p className="font-heading text-xs font-semibold tracking-[0.5em] text-primary">CORE</p>
-          </div>
-        </div>
-        <p className="nine-overline mt-3 text-[11px]">{isTeacher ? 'Exclusive private coaching' : 'Seu acompanhamento'}</p>
+        <NineSeal />
+        <p className="nine-overline mt-3 text-[11px]">{isTeacher ? 'Plataforma do coach' : 'Seu acompanhamento'}</p>
       </div>
 
       <div className="flex-1 space-y-1">
