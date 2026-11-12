@@ -193,10 +193,10 @@ const PosturaOverview = ({ onNavigate }: { onNavigate?: (view: string) => void }
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
-        <Button className="h-12 text-sm font-semibold uppercase tracking-wider" onClick={() => onNavigate?.('assessment-wizard')}>
+        <Button variant="outline" className="h-12 border-primary text-sm font-semibold uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary" onClick={() => onNavigate?.('assessment-wizard')}>
           <Plus className="h-5 w-5" /> Nova avaliação
         </Button>
-        <Button variant="outline" className="h-12 border-primary text-sm font-semibold uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary" onClick={() => onNavigate?.('progress-dashboard')}>
+        <Button variant="outline" className="h-12 text-sm font-semibold uppercase tracking-wider" onClick={() => onNavigate?.('progress-dashboard')}>
           <TrendingUp className="h-5 w-5" /> Comparar evolução
         </Button>
       </div>
