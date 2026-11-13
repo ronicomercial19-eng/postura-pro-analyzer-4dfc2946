@@ -51,7 +51,7 @@
     --status-good: 147 45% 46%;
     --status-regular: 215 27% 66%;
     --status-alert: 16 100% 56%;
-    --status-critical: 358 75% 59%;
+    --status-critical: 358 75% 67%;
 
     /* Selo NINE: laranja fixo em todas as personas (não segue --primary). */
     --brand: 16 100% 56%;
@@ -86,10 +86,16 @@
     --secondary-foreground: 215 32% 93%;
 
     --muted: 216 66% 18%;
-    --muted-foreground: 215 27% 66%;
 
     --accent: 216 66% 18%;
     --accent-foreground: 215 32% 93%;
+
+    /* Status e texto de apoio mais claros: o cartão L3 é mais claro que o fundo do personal. */
+    --muted-foreground: 215 27% 72%;
+    --status-regular: 215 27% 72%;
+    --status-good: 147 45% 59%;
+    --status-alert: 16 100% 73%;
+    --status-critical: 358 75% 78%;
 
     --border: 215 39% 33%;
     --input: 215 39% 33%;
@@ -133,31 +139,138 @@
 }
 
 /*
-  CAMADA DE TRANSIÇÃO. Telas ainda não migradas usam cores fixas do Tailwind
-  (bg-white, bg-green-100, text-blue-600...). Aqui elas são mapeadas para os tokens,
-  para não aparecerem claras ou fora da paleta no tema escuro:
-    verde = ok | laranja/amarelo = atenção | vermelho = crítico | azul/roxo/índigo = neutro.
-  Quando uma tela for migrada para tokens, o mapeamento correspondente deixa de ser usado.
-  Remover este bloco depois que todas as telas migrarem.
+  CAMADA DE TRANSIÇÃO (gerada a partir do uso real no código). Telas ainda não migradas usam cores fixas
+  do Tailwind (bg-white, bg-green-100, text-slate-900...). Aqui cada classe usada é mapeada para os tokens,
+  para não ficar clara nem ilegível no tema escuro:
+    verde = ok | laranja/amarelo = atenção | vermelho = crítico | azul/roxo/índigo/ciano = neutro (aço) ou ação (primary).
+  Quando uma tela for migrada para tokens, as linhas dela deixam de ser usadas. Remover o bloco ao final.
 */
+.bg-amber-100,
+.bg-amber-50,
+.bg-orange-100,
+.bg-orange-50,
+.bg-yellow-100,
+.bg-yellow-50 { background-color: hsl(var(--status-alert) / 0.14); }
+.bg-black { background-color: hsl(var(--background)); }
+.bg-blue-100,
+.bg-blue-50,
+.bg-cyan-100,
+.bg-indigo-100,
+.bg-indigo-50,
+.bg-purple-100,
+.bg-purple-50,
+.hover\:bg-blue-50:hover { background-color: hsl(var(--muted)); }
+.bg-blue-600 { background-color: hsl(var(--primary)); }
+.bg-gray-100,
+.bg-gray-200,
+.bg-gray-50,
+.bg-gray-600,
+.bg-slate-50,
+.hover\:bg-gray-700:hover { background-color: hsl(var(--secondary)); }
+.bg-green-100,
+.bg-green-50,
+.hover\:bg-green-50:hover { background-color: hsl(var(--status-good) / 0.14); }
+.bg-green-400,
+.bg-green-500,
+.bg-green-600 { background-color: hsl(var(--status-good)); }
+.bg-orange-500,
+.bg-yellow-500,
+.bg-yellow-600 { background-color: hsl(var(--status-alert)); }
+.bg-red-100,
+.bg-red-50,
+.hover\:bg-red-50:hover { background-color: hsl(var(--status-critical) / 0.14); }
+.bg-red-500,
+.bg-red-600 { background-color: hsl(var(--status-critical)); }
 .bg-white { background-color: hsl(var(--card)); }
-.bg-gray-50, .bg-gray-100, .bg-slate-50, .bg-slate-100 { background-color: hsl(var(--muted)); }
-.border-gray-200, .border-gray-300, .border-slate-200 { border-color: hsl(var(--border)); }
-.text-gray-400, .text-gray-500, .text-gray-600 { color: hsl(var(--muted-foreground)); }
-.text-gray-700, .text-gray-800, .text-gray-900 { color: hsl(var(--foreground)); }
-
-.bg-green-50, .bg-green-100 { background-color: hsl(var(--status-good) / 0.14); }
-.text-green-600, .text-green-700, .text-green-800 { color: hsl(var(--status-good)); }
-.border-green-200, .border-green-300 { border-color: hsl(var(--status-good) / 0.4); }
-
-.bg-yellow-50, .bg-yellow-100, .bg-amber-50, .bg-amber-100, .bg-orange-50, .bg-orange-100 { background-color: hsl(var(--status-alert) / 0.14); }
-.text-yellow-600, .text-yellow-700, .text-yellow-800, .text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900, .text-orange-600, .text-orange-700, .text-orange-800 { color: hsl(var(--status-alert)); }
-.border-yellow-200, .border-yellow-300, .border-amber-200, .border-amber-300, .border-amber-400, .border-orange-200, .border-orange-300 { border-color: hsl(var(--status-alert) / 0.4); }
-
-.bg-red-50, .bg-red-100 { background-color: hsl(var(--status-critical) / 0.14); }
-.text-red-600, .text-red-700, .text-red-800, .text-red-900 { color: hsl(var(--status-critical)); }
-.border-red-200, .border-red-300, .border-red-400 { border-color: hsl(var(--status-critical) / 0.4); }
-
-.bg-blue-50, .bg-blue-100, .bg-purple-50, .bg-purple-100, .bg-indigo-50, .bg-indigo-100 { background-color: hsl(var(--muted)); }
-.text-blue-600, .text-blue-700, .text-blue-800, .text-purple-600, .text-purple-700, .text-purple-800, .text-indigo-600, .text-indigo-700, .text-indigo-800, .text-indigo-900 { color: hsl(var(--muted-foreground)); }
-.border-blue-200, .border-purple-200, .border-indigo-200 { border-color: hsl(var(--border)); }
+.border-amber-300,
+.border-orange-200,
+.border-orange-300,
+.border-yellow-200,
+.border-yellow-300 { border-color: hsl(var(--status-alert) / 0.4); }
+.border-amber-400 { border-color: hsl(var(--status-alert)); }
+.border-blue-200,
+.border-blue-300,
+.border-cyan-200,
+.border-gray-300,
+.border-gray-800,
+.border-indigo-200,
+.border-purple-200,
+.border-purple-300,
+.border-slate-200,
+.border-slate-300 { border-color: hsl(var(--border)); }
+.border-blue-600 { border-color: hsl(var(--primary)); }
+.border-green-200,
+.border-green-300 { border-color: hsl(var(--status-good) / 0.4); }
+.border-green-400,
+.border-green-500,
+.border-green-600 { border-color: hsl(var(--status-good)); }
+.border-red-200,
+.border-red-300 { border-color: hsl(var(--status-critical) / 0.4); }
+.border-red-400,
+.border-red-600 { border-color: hsl(var(--status-critical)); }
+.focus\:ring-blue-500:focus,
+.ring-blue-500 { --tw-ring-color: hsl(var(--ring)); }
+.from-blue-50,
+.from-cyan-50,
+.from-red-50,
+.from-yellow-50 { --tw-gradient-from: hsl(var(--muted)) var(--tw-gradient-from-position); --tw-gradient-to: hsl(var(--muted) / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.hover\:bg-blue-700:hover { background-color: hsl(var(--primary) / 0.85); }
+.hover\:bg-green-700:hover { background-color: hsl(var(--status-good) / 0.85); }
+.hover\:bg-red-700:hover { background-color: hsl(var(--status-critical) / 0.85); }
+.hover\:text-blue-700:hover,
+.text-blue-500,
+.text-blue-600,
+.text-blue-700,
+.text-blue-800,
+.text-blue-900,
+.text-cyan-800,
+.text-cyan-900,
+.text-gray-300,
+.text-gray-400,
+.text-gray-500,
+.text-gray-600,
+.text-indigo-700,
+.text-indigo-800,
+.text-indigo-900,
+.text-purple-500,
+.text-purple-600,
+.text-purple-700,
+.text-purple-800,
+.text-purple-900,
+.text-slate-300,
+.text-slate-400,
+.text-slate-500,
+.text-slate-600 { color: hsl(var(--muted-foreground)); }
+.text-amber-600,
+.text-amber-700,
+.text-amber-800,
+.text-amber-900,
+.text-orange-400,
+.text-orange-500,
+.text-orange-600,
+.text-orange-700,
+.text-orange-800,
+.text-orange-900,
+.text-yellow-500,
+.text-yellow-600,
+.text-yellow-700,
+.text-yellow-800,
+.text-yellow-900 { color: hsl(var(--status-alert)); }
+.text-gray-700,
+.text-gray-800,
+.text-gray-900,
+.text-slate-700,
+.text-slate-900 { color: hsl(var(--foreground)); }
+.text-green-500,
+.text-green-600,
+.text-green-700,
+.text-green-800,
+.text-green-900 { color: hsl(var(--status-good)); }
+.text-red-500,
+.text-red-600,
+.text-red-700,
+.text-red-800 { color: hsl(var(--status-critical)); }
+.to-blue-50,
+.to-indigo-100,
+.to-orange-100,
+.to-orange-50 { --tw-gradient-to: hsl(var(--card)) var(--tw-gradient-to-position); }
