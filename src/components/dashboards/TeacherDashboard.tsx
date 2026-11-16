@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Users, Activity, Zap, ArrowRight, Plus, BarChart3, BookOpen, TrendingUp, Loader2 } from 'lucide-react';
+import { Users, Activity, Zap, ArrowRight, Plus, BarChart3, BookOpen, TrendingUp, Clock, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveAssessment } from '@/contexts/ActiveAssessmentContext';
+import { statusOf, STATUS_CHIP } from '@/lib/assessmentStatus';
 
 interface Props { onNavigate: (view: string) => void; }
 
@@ -16,30 +16,62 @@ interface RecentAssessment {
   student_name?: string;
 }
 
+const Kpi = ({ icon: Icon, value, label }: { icon: React.ElementType; value: number | string; label: string }) => (
+  <Card>
+    <CardContent className="p-4">
+      <div className="flex items-center gap-3">
+        <Icon className="h-6 w-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div>
+          <p className="num text-3xl font-semibold leading-none">{value}</p>
+          <p className="nine-overline mt-1">{label}</p>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const Shortcut = ({ title, hint, icon: Icon, onClick }: { title: string; hint: string; icon: React.ElementType; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex min-h-[72px] items-center justify-between rounded-lg border bg-card p-4 text-left transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  >
+    <div>
+      <p className="font-medium">{title}</p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
+    </div>
+    <Icon className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+  </button>
+);
+
 const TeacherDashboard = ({ onNavigate }: Props) => {
   const { setAssessment } = useActiveAssessment();
   const [stats, setStats] = useState({ students: 0, assessments: 0, active: 0, pending: 0 });
   const [recent, setRecent] = useState<RecentAssessment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => { load(); }, []);
 
   const load = async () => {
+    setLoading(true);
+    setFailed(false);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: studentsData } = await supabase.rpc('get_teacher_students', { teacher_id: user.id });
+      const { data: studentsData, error: studentsError } = await supabase.rpc('get_teacher_students', { teacher_id: user.id });
       const students = (studentsData as any[]) || [];
       const studentMap: Record<string, string> = {};
       students.forEach(s => { studentMap[s.student_id] = s.full_name || s.email; });
 
-      const { data: assessData } = await supabase
+      const { data: assessData, error: assessError } = await supabase
         .from('ppa_assessments' as any)
         .select('id, status, created_at, student_id')
         .eq('teacher_id', user.id)
         .order('created_at', { ascending: false })
         .limit(5);
+      if (studentsError || assessError) throw studentsError || assessError;
 
       const assessments = (assessData as any[]) || [];
       const enriched = assessments.map(a => ({ ...a, student_name: studentMap[a.student_id] || 'Aluno' }));
@@ -51,97 +83,90 @@ const TeacherDashboard = ({ onNavigate }: Props) => {
         active: assessments.filter(a => a.status === 'em_coleta' || a.status === 'analisando').length,
         pending: assessments.filter(a => a.status === 'novo').length,
       });
+    } catch (e) {
+      console.error('TeacherDashboard', e);
+      setFailed(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const statusColor = (s: string) => ({
-    pronto: 'bg-green-100 text-green-800',
-    analisando: 'bg-blue-100 text-blue-800',
-    em_coleta: 'bg-yellow-100 text-yellow-800',
-    plano_gerado: 'bg-purple-100 text-purple-800',
-  } as any)[s] || 'bg-muted text-muted-foreground';
-
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Painel do Professor</h1>
-          <p className="text-muted-foreground text-sm">Visão geral dos seus alunos e avaliações</p>
+          <h2 className="font-heading text-2xl font-bold">Painel do coach</h2>
+          <p className="text-sm text-muted-foreground">Visão geral dos seus alunos e avaliações</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => onNavigate('express')}>
-            <Zap className="h-4 w-4 mr-2" /> Análise Express
+          <Button variant="outline" className="h-11" onClick={() => onNavigate('express')}>
+            <Zap className="mr-2 h-4 w-4" /> Análise express
           </Button>
-          <Button onClick={() => onNavigate('clients')}>
-            <Plus className="h-4 w-4 mr-2" /> Nova Avaliação
+          <Button className="h-11" onClick={() => onNavigate('clients')}>
+            <Plus className="mr-2 h-4 w-4" /> Nova avaliação
           </Button>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><Users className="h-8 w-8 text-primary" /><div><p className="text-2xl font-bold">{stats.students}</p><p className="text-xs text-muted-foreground">Alunos</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><BarChart3 className="h-8 w-8 text-blue-500" /><div><p className="text-2xl font-bold">{stats.assessments}</p><p className="text-xs text-muted-foreground">Avaliações</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><Activity className="h-8 w-8 text-yellow-500" /><div><p className="text-2xl font-bold">{stats.active}</p><p className="text-xs text-muted-foreground">Em andamento</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><TrendingUp className="h-8 w-8 text-green-500" /><div><p className="text-2xl font-bold">{stats.pending}</p><p className="text-xs text-muted-foreground">Pendentes</p></div></div></CardContent></Card>
+      {failed && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-status-critical" aria-hidden="true" />
+              <p className="text-sm">Não foi possível carregar os dados do painel.</p>
+            </div>
+            <Button variant="outline" className="h-11" onClick={load}>Tentar de novo</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Kpi icon={Users} value={failed ? '—' : stats.students} label="Alunos" />
+        <Kpi icon={BarChart3} value={failed ? '—' : stats.assessments} label="Avaliações" />
+        <Kpi icon={Activity} value={failed ? '—' : stats.active} label="Em andamento" />
+        <Kpi icon={Clock} value={failed ? '—' : stats.pending} label="Pendentes" />
       </div>
 
-      {/* Atalhos rápidos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigate('clients')}>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div><p className="font-medium">Gerenciar Alunos</p><p className="text-xs text-muted-foreground">Vincular e listar</p></div>
-            <Users className="h-6 w-6 text-primary" />
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigate('protocol-library')}>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div><p className="font-medium">Biblioteca</p><p className="text-xs text-muted-foreground">Protocolos 9FIT</p></div>
-            <BookOpen className="h-6 w-6 text-primary" />
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigate('progress-dashboard')}>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div><p className="font-medium">Evolução</p><p className="text-xs text-muted-foreground">Métricas temporais</p></div>
-            <TrendingUp className="h-6 w-6 text-primary" />
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <Shortcut title="Gerenciar alunos" hint="Vincular e listar" icon={Users} onClick={() => onNavigate('clients')} />
+        <Shortcut title="Biblioteca" hint="Protocolos 9FIT" icon={BookOpen} onClick={() => onNavigate('protocol-library')} />
+        <Shortcut title="Evolução" hint="Métricas temporais" icon={TrendingUp} onClick={() => onNavigate('progress-dashboard')} />
       </div>
 
-      {/* Avaliações recentes */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Avaliações Recentes</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="nine-overline text-sm text-foreground">Avaliações recentes</CardTitle></CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+            <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>
+          ) : failed ? (
+            <p className="text-sm text-muted-foreground">Dados indisponíveis no momento.</p>
           ) : recent.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma avaliação ainda. Comece criando uma nova.</p>
           ) : (
             <div className="space-y-2">
-              {recent.map(a => (
-                <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                  <div className="flex items-center gap-3">
-                    <Badge className={statusColor(a.status)}>{a.status}</Badge>
-                    <div>
-                      <p className="text-sm font-medium">{a.student_name}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString('pt-BR')}</p>
+              {recent.map(a => {
+                const st = statusOf(a.status);
+                return (
+                  <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`${STATUS_CHIP} ${st.css}`}>{st.label}</span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{a.student_name}</p>
+                        <p className="num text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString('pt-BR')}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
                     {/* O publicar-para-aluno de verdade fica em Resultados, onde o aiReport
                         completo (relatorio, plano, fail-safes) esta disponivel. Aqui so
                         navegamos para o lugar certo, em vez de abrir um modal em branco. */}
-                    <Button variant="ghost" size="sm" onClick={() => {
+                    <Button variant="ghost" className="h-11" onClick={() => {
                       setAssessment(a.id, a.student_id, a.student_name || '');
                       onNavigate(a.status === 'em_coleta' ? 'media-collector' : 'results-hud');
                     }}>
-                      Abrir <ArrowRight className="h-4 w-4 ml-1" />
+                      Abrir <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
