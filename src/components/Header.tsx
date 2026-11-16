@@ -3,38 +3,42 @@ import { Bell, Menu, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
+  const email = user?.email || '';
+  const name: string = (user?.user_metadata as any)?.full_name || email.split('@')[0] || '';
+  const initials = name.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((p: string) => p[0]).join('').toUpperCase() || '9';
+  const roleLabel = userRole === 'student' ? 'Aluno' : 'Coach';
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
+    <header className="border-b border-border bg-background px-4 py-4 md:px-6">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center space-x-4 min-w-0">
-          <Button variant="ghost" size="sm" className="md:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-11 w-11 md:hidden" aria-label="Menu">
             <Menu className="h-5 w-5" />
           </Button>
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-[#2E5A88] truncate">PosturaPro</h1>
-            <p className="text-xs md:text-sm text-gray-600 hidden sm:block">Sistema de Análise Postural</p>
+            <h1 className="truncate font-heading text-2xl font-bold uppercase tracking-wide text-primary md:text-3xl">Postura Pro</h1>
+            <p className="nine-overline hidden sm:block">Análise postural avançada</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 md:gap-2">
-          <Button variant="ghost" size="sm">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Notificações">
             <Bell className="h-5 w-5" />
           </Button>
           {user && (
             <>
-              <span className="hidden lg:inline text-xs text-gray-500 max-w-[180px] truncate">
-                {user.email}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <LogOut className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Sair</span>
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card font-heading text-sm font-semibold">
+                  {initials}
+                </div>
+                <div className="hidden min-w-0 lg:block">
+                  <p className="max-w-[180px] truncate text-sm font-medium leading-tight">{name}</p>
+                  <p className="text-xs font-medium leading-tight text-primary">{roleLabel}</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="h-11 w-11 md:hidden" onClick={signOut} aria-label="Sair">
+                <LogOut className="h-5 w-5" />
               </Button>
             </>
           )}
