@@ -5,18 +5,11 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveAssessment } from '@/contexts/ActiveAssessmentContext';
 import { drawOverlay, OverlayAngle, OverlayClass } from '@/services/overlayRenderer';
+import { resolvePhotoUrl } from '@/lib/photoUrl';
 
 interface Metric { key: string; value: number; unit: string | null }
 
-// URLs assinadas gravadas no banco expiram: renova a partir do caminho do arquivo.
-async function freshUrl(url: string): Promise<string> {
-  const m = url?.match(/\/object\/sign\/photos\/([^?]+)/);
-  if (!m) return url;
-  try {
-    const { data } = await supabase.storage.from('photos').createSignedUrl(decodeURIComponent(m[1]), 3600);
-    return data?.signedUrl || url;
-  } catch { return url; }
-}
+const freshUrl = resolvePhotoUrl;
 
 const PhotoMetricsOverlay = ({ metrics, view }: { metrics: Metric[]; view: string }) => {
   const { active } = useActiveAssessment();
@@ -48,7 +41,8 @@ const PhotoMetricsOverlay = ({ metrics, view }: { metrics: Metric[]; view: strin
     setBusy(true); setError(''); setImageUrl('');
     (async () => {
       if (!active.assessmentId) { setBusy(false); return; }
-      const { data } = await supabase.from('ppa_media_assets' as any).select('image_url').eq('assessment_id', active.assessmentId).eq('view', view).limit(1);
+      const { data, error: qErr } = await supabase.from('ppa_media_assets' as any).select('image_url').eq('assessment_id', active.assessmentId).eq('view', view).limit(1);
+      if (qErr) { if (!off) { setError('Não foi possível consultar as fotos. Tente de novo em instantes.'); setBusy(false); } return; }
       const url = (data as any[])?.[0]?.image_url;
       if (!url) { if (!off) { setError('Foto desta vista não encontrada.'); setBusy(false); } return; }
       const fresh = await freshUrl(url);

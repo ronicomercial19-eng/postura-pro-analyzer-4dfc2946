@@ -13,8 +13,8 @@ export interface OverlayInput {
   angles: Record<string, OverlayAngle>;
 }
 
-export const OVERLAY_COLOR: Record<OverlayClass, string> = { normal: '#22c55e', leve: '#f59e0b', significativo: '#ef4444' };
-const CLS_TEXT: Record<OverlayClass, string> = { normal: 'Normal', leve: 'Leve', significativo: 'Signif.' };
+export const OVERLAY_COLOR: Record<OverlayClass, string> = { normal: '#41AA70', leve: '#8FA3BF', significativo: '#FF5A1F' };
+const CLS_TEXT: Record<OverlayClass, string> = { normal: 'Bom', leve: 'Regular', significativo: 'Atenção' };
 export const OVERLAY_LABEL: Record<string, string> = {
   head_tilt: 'Cabeça (inclin.)', shoulders: 'Ombros (desnível)', hips: 'Quadril (desnível)', trunk: 'Tronco (desvio)',
   knee_D: 'Joelho Dir', knee_E: 'Joelho Esq', head_forward: 'Cabeça à frente', trunk_lean: 'Tronco (inclin.)', knee_side: 'Joelho (perfil)',
@@ -26,7 +26,7 @@ type Pt = { x: number; y: number };
 export function drawOverlay(ctx: CanvasRenderingContext2D, o: OverlayInput): void {
   const { width: W, height: H, scale: s, view } = o;
   const P = (n: string): Pt | null => (o.kps[n] ? { x: o.kps[n].x * s, y: o.kps[n].y * s } : null);
-  const col = (id: string) => (o.angles[id] ? OVERLAY_COLOR[o.angles[id].cls] : '#22c55e');
+  const col = (id: string) => (o.angles[id] ? OVERLAY_COLOR[o.angles[id].cls] : '#41AA70');
   const mid = (a: Pt | null, b: Pt | null): Pt | null => (a && b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : null);
   const lw = Math.max(2, W / 240);
 
@@ -43,12 +43,12 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, o: OverlayInput): voi
     if (!a || !at) return;
     const text = `${a.value.toFixed(1)}°`;
     ctx.save();
-    ctx.font = `bold ${Math.round(W / 46)}px sans-serif`;
+    ctx.font = `bold ${Math.round(W / 46)}px "IBM Plex Sans", sans-serif`;
     const tw = ctx.measureText(text).width + W / 50, th = W / 32;
     const x = Math.min(Math.max(at.x + dx, tw / 2 + 2), W - tw / 2 - 2), y = Math.min(Math.max(at.y + dy, th / 2 + 2), H - th / 2 - 2);
-    ctx.fillStyle = '#fde68a'; ctx.strokeStyle = OVERLAY_COLOR[a.cls]; ctx.lineWidth = Math.max(1.5, W / 400);
+    ctx.fillStyle = '#E6EBF2'; ctx.strokeStyle = OVERLAY_COLOR[a.cls]; ctx.lineWidth = Math.max(1.5, W / 400);
     ctx.fillRect(x - tw / 2, y - th / 2, tw, th); ctx.strokeRect(x - tw / 2, y - th / 2, tw, th);
-    ctx.fillStyle = '#111827'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#0A0B0C'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(text, x, y + 1);
     ctx.restore();
   };
@@ -95,7 +95,7 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, o: OverlayInput): voi
     const p = P(n);
     if (!p) return;
     ctx.save();
-    ctx.fillStyle = '#ef4444'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.5, W / 420);
+    ctx.fillStyle = '#FF5A1F'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.5, W / 420);
     ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(4, W / 130), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.restore();
   });
@@ -107,18 +107,18 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, o: OverlayInput): voi
     const bw = Math.round(W * 0.42), bh = titleH + rows.length * rowH + pad;
     const bx = W - bw - W * 0.015, by = W * 0.015;
     ctx.save();
-    ctx.fillStyle = 'rgba(8,12,22,0.88)'; ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = Math.max(1.5, W / 420); ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = 'rgba(10,11,12,0.88)'; ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#8FA3BF'; ctx.lineWidth = Math.max(1.5, W / 420); ctx.strokeRect(bx, by, bw, bh);
     ctx.textBaseline = 'middle';
-    ctx.font = `bold ${Math.round(fs * 0.82)}px sans-serif`; ctx.fillStyle = '#4ade80'; ctx.textAlign = 'left';
+    ctx.font = `bold ${Math.round(fs * 0.82)}px "IBM Plex Sans", sans-serif`; ctx.fillStyle = '#41AA70'; ctx.textAlign = 'left';
     ctx.fillText('MÉTRICAS BIOMECÂNICAS', bx + pad, by + titleH / 2 + pad * 0.3);
     rows.forEach((id, i) => {
       const a = o.angles[id], y = by + titleH + rowH * i + rowH / 2;
-      ctx.font = `${fs}px sans-serif`; ctx.fillStyle = '#e5e7eb'; ctx.textAlign = 'left';
+      ctx.font = `${fs}px "IBM Plex Sans", sans-serif`; ctx.fillStyle = '#E6EBF2'; ctx.textAlign = 'left';
       ctx.fillText(OVERLAY_LABEL[id] || id, bx + pad, y);
-      ctx.font = `bold ${fs}px sans-serif`; ctx.fillStyle = '#fde68a'; ctx.textAlign = 'right';
+      ctx.font = `bold ${fs}px "IBM Plex Sans", sans-serif`; ctx.fillStyle = '#E6EBF2'; ctx.textAlign = 'right';
       ctx.fillText(`${a.value.toFixed(1)}°`, bx + bw * 0.64, y);
-      ctx.font = `bold ${Math.round(fs * 0.85)}px sans-serif`; ctx.fillStyle = OVERLAY_COLOR[a.cls];
+      ctx.font = `bold ${Math.round(fs * 0.85)}px "IBM Plex Sans", sans-serif`; ctx.fillStyle = OVERLAY_COLOR[a.cls];
       ctx.fillText(CLS_TEXT[a.cls], bx + bw - pad, y);
     });
     ctx.restore();
@@ -126,8 +126,8 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, o: OverlayInput): voi
 
   // marca
   ctx.save();
-  ctx.font = `bold ${Math.round(W / 40)}px sans-serif`; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = `bold ${Math.round(W / 40)}px "IBM Plex Sans", sans-serif`; ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 4; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-  ctx.fillText('PosturaPro', W * 0.025, H - W * 0.02);
+  ctx.fillText('Postura Pro | NINE Health Tech', W * 0.025, H - W * 0.02);
   ctx.restore();
 }
