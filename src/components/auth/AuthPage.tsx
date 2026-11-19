@@ -104,33 +104,6 @@ const AuthPage = () => {
     }
   };
 
-  // Contas de demonstração
-  const handleDemoLogin = async (demoType: 'teacher' | 'student') => {
-    clearMessages();
-    
-    const demoCredentials = {
-      teacher: { email: 'professor@demo.com', password: 'demo123', name: 'Professor Demo' },
-      student: { email: 'aluno@demo.com', password: 'demo123', name: 'Aluno Demo' }
-    };
-    
-    const creds = demoCredentials[demoType];
-    
-    // Primeiro tenta fazer login
-    const loginResult = await signIn(creds.email, creds.password);
-    
-    if (!loginResult.success) {
-      // Se falhar, cria a conta demo
-      const signupResult = await signUp(creds.email, creds.password, creds.name, demoType);
-      
-      if (!signupResult.success) {
-        setError(`Erro ao criar conta demo: ${signupResult.error}`);
-      } else {
-        setSuccess(`Conta demo ${demoType} criada e logada com sucesso!`);
-      }
-    } else {
-      setSuccess(`Login demo ${demoType} realizado com sucesso!`);
-    }
-  };
 
   // Não renderizar até estar inicializado
   if (!initialized) {
@@ -213,29 +186,6 @@ const AuthPage = () => {
                   </Button>
                 </form>
                 
-                {/* Botões Demo */}
-                <div className="mt-4 space-y-2">
-                  <p className="text-xs text-center text-gray-500">Ou teste com contas demo:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDemoLogin('teacher')}
-                      disabled={loading}
-                    >
-                      Professor Demo
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDemoLogin('student')}
-                      disabled={loading}
-                    >
-                      Aluno Demo
-                    </Button>
-                  </div>
-                </div>
-              </TabsContent>
               
               {/* Tab de Registro */}
               <TabsContent value="register">
