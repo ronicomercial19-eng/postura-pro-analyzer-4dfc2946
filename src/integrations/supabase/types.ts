@@ -1061,6 +1061,27 @@ export type Database = {
           },
         ]
       }
+      teacher_access: {
+        Row: {
+          created_at: string
+          plan_status: string
+          trial_ends_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          plan_status?: string
+          trial_ends_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          plan_status?: string
+          trial_ends_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_consents: {
         Row: {
           accepted_at: string
@@ -1121,6 +1142,7 @@ export type Database = {
         Returns: Json
       }
       get_my_ai_quota: { Args: never; Returns: Json }
+      get_teacher_access: { Args: never; Returns: Json }
       get_teacher_students: {
         Args: { teacher_id?: string }
         Returns: {
