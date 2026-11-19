@@ -1,0 +1,1 @@
+REVOKE ALL ON public.teacher_access FROM anon, authenticated;

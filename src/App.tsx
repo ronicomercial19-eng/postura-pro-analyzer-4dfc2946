@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 import AuthPage from "./components/auth/AuthPage";
 import { Loader2 } from "lucide-react";
 import ConsentGate from "./components/legal/ConsentGate";
+import TrialGate from "./components/billing/TrialGate";
 import LegalPage from "./pages/LegalPage";
 
 const queryClient = new QueryClient({
@@ -49,7 +50,7 @@ const App = () => {
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/termos" element={<LegalPage kind="termos" />} />
                   <Route path="/privacidade" element={<LegalPage kind="privacidade" />} />
-                  <Route path="/" element={<AuthGate><ConsentGate><Index /></ConsentGate></AuthGate>} />
+                  <Route path="/" element={<AuthGate><ConsentGate><TrialGate><Index /></TrialGate></ConsentGate></AuthGate>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </TooltipProvider>
