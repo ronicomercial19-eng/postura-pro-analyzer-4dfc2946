@@ -185,8 +185,8 @@ const AuthPage = () => {
                     Entrar
                   </Button>
                 </form>
-                
-              
+              </TabsContent>
+
               {/* Tab de Registro */}
               <TabsContent value="register">
                 <form onSubmit={handleSignUp} className="space-y-4">
